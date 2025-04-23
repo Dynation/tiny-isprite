@@ -1,0 +1,41 @@
+{
+  "name": "tyny-isprite",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "./dist/Ikon.cjs",
+  "module": "./dist/Ikon.js",
+  "types": "./dist/Ikon.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/Ikon.js",
+      "require": "./dist/Ikon.cjs"
+    }
+  },
+  "scripts": {
+    "build": "tsup src/Ikon.tsx --format esm,cjs --dts --external react"
+  },
+  "keywords": [
+    "svg",
+    "sprite",
+    "icon",
+    "react",
+    "svg-sprite",
+    "icons",
+    "tiny",
+    "vite",
+    "nextjs"
+  ],
+  "author": "Dina",
+  "license": "MIT",
+  "description": "Lightweight React component for using SVG sprites with Next.js, Vite and Turbopack.",
+  "devDependencies": {
+    "@types/react": "^19.1.2",
+    "@types/react-dom": "^19.1.2",
+    "tsup": "^8.4.0",
+    "typescript": "^5.8.3"
+  },
+  "peerDependencies": {
+    "react": "^17 || ^18 || ^19"
+  }
+}
+
