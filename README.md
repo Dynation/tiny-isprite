@@ -27,46 +27,36 @@ But this causes:
 
 ---
 
-## ✨ Features
+## ⚡ How It Works
 
-- ⚡ Ultra-light, zero-runtime dependency
-- 🧠 Works with `vite`, `next`, `turbopack`
-- 🎨 Easy to style with Tailwind/CSS
-- 📦 Peer-dependency friendly (`react` only)
+`tyny-isprite` leverages native **SVG Sprites** technology. Instead of embedding full SVG code for each icon, it references symbols inside a single `sprite.svg` file using the `<use>` tag:
 
----
-
-## 🚀 How to use
-
-### 1. Drop your raw `.svg` files into `/icons/`
-
-For example:
-
-```
-icons/
-├─ star.svg
-├─ heart.svg
-├─ user.svg
-```
-
-### 2. Generate your SVG sprite
-
-```bash
-npm run build:sprite
-```
-
-This creates a file at `public/sprite.svg` like:
-
-```xml
-<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
-  <symbol id="icon-star" viewBox="0 0 24 24">...</symbol>
-  <symbol id="icon-heart" viewBox="0 0 24 24">...</symbol>
+```html
+<svg width="24" height="24">
+  <use href="/sprite.svg#icon-star"></use>
 </svg>
 ```
 
-> This file is **never rendered directly** — it's used as a reference for all your icons via `<use>`.
+This means:
+- One HTTP request for all icons
+- Better caching
+- Smaller JavaScript bundles
+- Easy styling with CSS/Tailwind
 
-### 3. Use `<Icon />` component in your app
+All you need is to generate `sprite.svg` from your raw icons and use the provided `<Icon />` component.
+
+---
+
+## 🚀 Quick Start
+
+1. Place your `.svg` files in `/icons/` folder.
+2. Run:
+
+```bash
+npx build-sprite
+```
+
+3. Use in React:
 
 ```tsx
 import { Icon } from 'tyny-isprite';
@@ -74,8 +64,24 @@ import { Icon } from 'tyny-isprite';
 <Icon name="star" size={32} external />
 ```
 
-> The `name` maps to your filename:  
-> `icons/heart.svg` → `icon-heart`
+---
+
+## ❓ FAQ
+
+**Q: My icon doesn't show up, what's wrong?**  
+A: Ensure that:
+- `sprite.svg` is located in your `public/` folder.
+- You are using the correct `name` prop (matching your SVG filename).
+- Check browser DevTools for any 404 errors.
+
+---
+
+**Q: Can I style icons with Tailwind or CSS?**  
+A: Yes! The `<Icon />` component supports `className` prop for full control.
+
+```tsx
+<Icon name="heart" className="text-red-500 hover:text-pink-400" />
+```
 
 ---
 
@@ -92,4 +98,4 @@ import { Icon } from 'tyny-isprite';
 
 ## 🧩 License
 
-MIT — © 2025 [Dina](https://github.com/Dynation)
+MIT — © 2025 [Dina](https://github.com/YOUR_USERNAME)
