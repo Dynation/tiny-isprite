@@ -1,12 +1,17 @@
-# 🧩 tyny-isprite
+# 🧩 tiny-isprite
+
+![npm](https://img.shields.io/npm/v/tiny-isprite) ![license](https://img.shields.io/npm/l/tiny-isprite)
 
 > Lightweight React SVG sprite component for projects using Vite, Next.js or Turbopack.
 
-`tyny-isprite` helps you render SVG icons via `<use>` from a generated sprite — no more bloated icon imports, just one cached SVG for all your icons.
+`tiny-isprite` helps you render SVG icons via `<use>` from a generated sprite — no more bloated icon imports, just one cached SVG for all your icons.
+
+> ⚡️ _Why bloat your bundle with dozens of SVG imports?_  
+> Use `tiny-isprite` and let your icons stay... tiny! 😄
 
 ---
 
-## 💡 Why use `tyny-isprite`?
+## 💡 Why use `tiny-isprite`?
 
 Modern frontend apps often import dozens of icons like this:
 
@@ -29,7 +34,7 @@ But this causes:
 
 ## ⚡ How It Works
 
-`tyny-isprite` leverages native **SVG Sprites** technology. Instead of embedding full SVG code for each icon, it references symbols inside a single `sprite.svg` file using the `<use>` tag:
+`tiny-isprite` leverages native **SVG Sprites** technology. Instead of embedding full SVG code for each icon, it references symbols inside a single `sprite.svg` file using the `<use>` tag:
 
 ```html
 <svg width="24" height="24">
@@ -59,7 +64,7 @@ npx build-sprite
 3. Use in React:
 
 ```tsx
-import { Icon } from 'tyny-isprite';
+import { Icon } from 'tiny-isprite';
 
 <Icon name="star" size={32} external />
 ```
@@ -96,6 +101,16 @@ A: Yes! The `<Icon />` component supports `className` prop for full control.
 
 ---
 
+## 🚧 Roadmap
+- [x] Basic CLI support
+- [x] Argument handling
+- [ ] Watch mode for auto-regeneration
+- [ ] Add tests
+- [ ] Example project (StackBlitz)
+
+---
+
 ## 🧩 License
 
 MIT — © 2025 [Dina](https://github.com/YOUR_USERNAME)
+

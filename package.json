@@ -1,5 +1,5 @@
 {
-  "name": "tyny-isprite",
+  "name": "tiny-isprite",
   "version": "1.0.1",
   "type": "module",
   "main": "./dist/Iсon.cjs",

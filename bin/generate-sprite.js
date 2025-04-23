@@ -1,15 +1,19 @@
 #!/usr/bin/env node
-// This script generates a sprite.svg file from all SVG files in the icons directory.
-import fs from 'fs';
+
+import fs from 'fs/promises';
 import path from 'path';
-import { fileURLToPath } from 'url';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const cwd = process.cwd(); // Get the current working directory
 
-const ICONS_DIR = path.join(__dirname, '../icons');
-const OUTPUT_FILE = path.join(__dirname, '../public/sprite.svg');
+const ICONS_DIR = process.argv[2] 
+    ? path.resolve(cwd, process.argv[2]) 
+    : path.join(cwd, 'icons');
 
-function getSymbolFromSvg(svgContent, id) {
+const OUTPUT_FILE = process.argv[3] 
+    ? path.resolve(cwd, process.argv[3]) 
+    : path.join(cwd, 'public', 'sprite.svg');
+
+async function getSymbolFromSvg(svgContent, id) {
   const cleaned = svgContent
     .replace(/<\?xml.*?\?>/, '')
     .replace(/<!DOCTYPE.*?>/, '')
@@ -23,19 +27,30 @@ function getSymbolFromSvg(svgContent, id) {
   return `<symbol id="icon-${id}" ${viewBox}>${cleaned}</symbol>`;
 }
 
-function generateSprite() {
-  const files = fs.readdirSync(ICONS_DIR).filter(file => file.endsWith('.svg'));
+async function generateSprite() {
+  try {
+    const files = (await fs.readdir(ICONS_DIR)).filter(file => file.endsWith('.svg'));
 
-  const symbols = files.map(file => {
-    const content = fs.readFileSync(path.join(ICONS_DIR, file), 'utf8');
-    const id = path.basename(file, '.svg');
-    return getSymbolFromSvg(content, id);
-  });
+    if (files.length === 0) {
+      console.warn('⚠️  No SVG files found in:', ICONS_DIR);
+      return;
+    }
 
-  const sprite = `<svg xmlns="http://www.w3.org/2000/svg" style="display:none">\n${symbols.join('\n')}\n</svg>`;
+    const symbols = await Promise.all(
+      files.map(async file => {
+        const content = await fs.readFile(path.join(ICONS_DIR, file), 'utf8');
+        const id = path.basename(file, '.svg');
+        return getSymbolFromSvg(content, id);
+      })
+    );
 
-  fs.writeFileSync(OUTPUT_FILE, sprite, 'utf8');
-  console.log(`✅ sprite.svg created with ${symbols.length} icons`);
+    const sprite = `<svg xmlns="http://www.w3.org/2000/svg" style="display:none">\n${symbols.join('\n')}\n</svg>`;
+
+    await fs.writeFile(OUTPUT_FILE, sprite, 'utf8');
+    console.log(`✅ sprite.svg created with ${symbols.length} icons at ${OUTPUT_FILE}`);
+  } catch (error) {
+    console.error('❌ Error generating sprite:', error.message);
+  }
 }
 
 generateSprite();
