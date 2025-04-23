@@ -2,17 +2,21 @@
   "name": "tyny-isprite",
   "version": "1.0.0",
   "type": "module",
-  "main": "./dist/Ikon.cjs",
-  "module": "./dist/Ikon.js",
-  "types": "./dist/Ikon.d.ts",
+  "main": "./dist/Iсon.cjs",
+  "module": "./dist/Iсon.js",
+  "types": "./dist/Iсon.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/Ikon.js",
-      "require": "./dist/Ikon.cjs"
+      "import": "./dist/Iсon.js",
+      "require": "./dist/Iсon.cjs"
     }
   },
+  "bin": {
+    "build-sprite": "./bin/generate-sprite.js"
+  },
   "scripts": {
-    "build": "tsup src/Ikon.tsx --format esm,cjs --dts --external react"
+    "build": "tsup src/Iсon.tsx --format esm,cjs --dts --external react",
+    "build:sprite": "node ./bin/generate-sprite.js"
   },
   "keywords": [
     "svg",
@@ -38,4 +42,3 @@
     "react": "^17 || ^18 || ^19"
   }
 }
-
