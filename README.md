@@ -52,6 +52,26 @@ All you need is to generate `sprite.svg` from your raw icons and use the provide
 
 ---
 
+## 📂 Recommended Project Structure
+
+Place your raw `.svg` icons in a dedicated `icons/` folder (outside of `public`).
+
+Example:
+
+```
+my-project/
+├── icons/              # Source SVG files
+│   ├── star.svg
+│   └── heart.svg
+├── public/             
+│   └── sprite.svg      # Generated file (DO NOT edit manually)
+```
+
+The `public/` folder should only contain the generated `sprite.svg`.  
+Do **not** place raw icons inside `public/icons`.
+
+---
+
 ## 🚀 Quick Start
 
 1. Place your `.svg` files in `/icons/` folder.
@@ -68,6 +88,28 @@ import { Icon } from 'tiny-isprite';
 
 <Icon name="star" size={32} external />
 ```
+
+---
+
+## ⚡ Using build-sprite with Custom Paths
+
+By default, the command:
+
+```bash
+npx build-sprite
+```
+
+- Reads icons from: `./icons/`
+- Outputs to: `./public/sprite.svg`
+
+If you want to specify custom folders:
+
+```bash
+npx build-sprite ./my-icons ./static/assets/sprite.svg
+```
+
+- First argument = source folder  
+- Second argument = output file path
 
 ---
 
