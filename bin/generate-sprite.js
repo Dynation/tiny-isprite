@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+// This script generates a sprite.svg file from all SVG files in the icons directory.
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
