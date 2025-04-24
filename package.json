@@ -15,6 +15,12 @@
   "bin": {
     "build-sprite": "./bin/generate-sprite.js"
   },
+  "files": [
+  "dist",
+  "bin",
+  "LICENSE.md",
+  "README.md"
+],
   "scripts": {
     "build": "tsup src/Icon.tsx --format esm,cjs --dts --external react && cp src/wrapper/index.js dist/index.js",
     "build:sprite": "node ./bin/generate-sprite.js"

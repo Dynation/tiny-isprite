@@ -1,0 +1,6 @@
+src/
+icons/
+public/
+tsconfig.json
+*.log
+*.lock
