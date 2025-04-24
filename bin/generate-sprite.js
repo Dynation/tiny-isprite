@@ -1,55 +1,74 @@
-#!/usr/bin/env node
-
 import fs from 'fs/promises';
 import path from 'path';
+import { fileURLToPath } from 'url';
 
-const cwd = process.cwd(); // Get the current working directory
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const ICONS_DIR = process.argv[2] 
-    ? path.resolve(cwd, process.argv[2]) 
-    : path.join(cwd, 'icons');
+const ICONS_DIR = process.argv[2] || path.join(__dirname, '../icons');
+const OUTPUT_FILE = process.argv[3] || path.join(__dirname, '../public/sprite.svg');
+const PRESERVE_FLAG = process.argv.includes('--preserve-colored');
 
-const OUTPUT_FILE = process.argv[3] 
-    ? path.resolve(cwd, process.argv[3]) 
-    : path.join(cwd, 'public', 'sprite.svg');
+async function isMulticolor(svgContent) {
+  // Detects multiple fills that are not 'none' or 'currentColor'
+  const fillMatches = svgContent.match(/fill=["'](.*?)["']/gi) || [];
+  const distinct = new Set(
+    fillMatches.map(f => f.replace(/fill=|['"]/g, '').trim())
+               .filter(v => v !== 'none' && v !== 'currentColor')
+  );
+  return distinct.size > 1;
+}
 
-async function getSymbolFromSvg(svgContent, id) {
-  const cleaned = svgContent
-    .replace(/<\?xml.*?\?>/, '')
-    .replace(/<!DOCTYPE.*?>/, '')
+function sanitizeSvg(svgContent, convertFill = true) {
+  let cleaned = svgContent
+    .replace(/<\?xml[^>]*>/g, '')
+    .replace(/<!DOCTYPE[^>]*>/g, '')
+    .replace(/<!--.*?-->/gs, '')
     .replace(/<svg[^>]*>/, '')
     .replace(/<\/svg>/, '')
     .trim();
 
-  const viewBoxMatch = svgContent.match(/viewBox="([^"]+)"/);
-  const viewBox = viewBoxMatch ? `viewBox="${viewBoxMatch[1]}"` : '';
+  if (convertFill) {
+    cleaned = cleaned.replace(/fill=["'](?!none|currentColor).*?["']/gi, 'fill="currentColor"');
+  }
 
-  return `<symbol id="icon-${id}" ${viewBox}>${cleaned}</symbol>`;
+  return cleaned;
+}
+
+async function getSymbolFromSvg(svgContent, id, preserveColor) {
+  const viewBoxMatch = svgContent.match(/viewBox=["']([^"']+)["']/);
+  const viewBox = viewBoxMatch ? `viewBox=\"${viewBoxMatch[1]}\"` : '';
+
+  const cleaned = sanitizeSvg(svgContent, !preserveColor);
+  return `<symbol id="icon-${id}" ${viewBox}>\n${cleaned}\n</symbol>`;
 }
 
 async function generateSprite() {
   try {
-    const files = (await fs.readdir(ICONS_DIR)).filter(file => file.endsWith('.svg'));
-
-    if (files.length === 0) {
-      console.warn('⚠️  No SVG files found in:', ICONS_DIR);
+    const files = (await fs.readdir(ICONS_DIR)).filter(f => f.endsWith('.svg'));
+    if (!files.length) {
+      console.warn('⚠️ No SVG files found.');
       return;
     }
 
     const symbols = await Promise.all(
-      files.map(async file => {
+      files.map(async (file) => {
         const content = await fs.readFile(path.join(ICONS_DIR, file), 'utf8');
         const id = path.basename(file, '.svg');
-        return getSymbolFromSvg(content, id);
+        const multicolor = await isMulticolor(content);
+
+        if (multicolor && PRESERVE_FLAG) {
+          console.log(`🎨 Icon '${file}' detected as multicolor — preserved.`);
+        }
+
+        return getSymbolFromSvg(content, id, multicolor && PRESERVE_FLAG);
       })
     );
 
-    const sprite = `<svg xmlns="http://www.w3.org/2000/svg" style="display:none">\n${symbols.join('\n')}\n</svg>`;
-
+    const sprite = `<svg xmlns=\"http://www.w3.org/2000/svg\" style=\"display:none\">\n${symbols.join('\n')}\n</svg>`;
     await fs.writeFile(OUTPUT_FILE, sprite, 'utf8');
     console.log(`✅ sprite.svg created with ${symbols.length} icons at ${OUTPUT_FILE}`);
-  } catch (error) {
-    console.error('❌ Error generating sprite:', error.message);
+  } catch (err) {
+    console.error('❌ Error:', err.message);
   }
 }
 

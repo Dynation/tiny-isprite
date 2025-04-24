@@ -1,4 +1,4 @@
-# 🧩 tiny-isprite
+## 🧩 tiny-isprite
 
 ![npm](https://img.shields.io/npm/v/tiny-isprite) ![license](https://img.shields.io/npm/l/tiny-isprite)
 
@@ -6,7 +6,7 @@
 
 `tiny-isprite` helps you render SVG icons via `<use>` from a generated sprite — no more bloated icon imports, just one cached SVG for all your icons.
 
-> ⚡️ _Why bloat your bundle with dozens of SVG imports?_  
+> ⚡️ _Why bloat your bundle with dozens of SVG imports?_
 > Use `tiny-isprite` and let your icons stay... tiny! 😄
 
 ---
@@ -20,9 +20,9 @@ import StarIcon from './icons/star.svg';
 ```
 
 But this causes:
-- ❌ Every icon adds bytes to your JS bundle  
-- ❌ Styling via CSS or Tailwind is tricky  
-- ❌ Harder to change icon sets globally  
+- ❌ Every icon adds bytes to your JS bundle
+- ❌ Styling via CSS or Tailwind is tricky
+- ❌ Harder to change icon sets globally
 
 **SVG sprite solves this**:
 
@@ -63,7 +63,7 @@ my-project/
 ├── icons/              # Source SVG files
 │   ├── star.svg
 │   └── heart.svg
-├── public/             
+├── public/            
 │   └── sprite.svg      # Generated file (DO NOT edit manually)
 ```
 
@@ -74,7 +74,7 @@ Do **not** place raw icons inside `public/icons`.
 
 ## 🚀 Quick Start
 
-1. Place your `.svg` files in `/icons/` folder.
+1. Place your `.svg` files in `/icons/` folder.  
 2. Run:
 
 ```bash
@@ -113,10 +113,33 @@ npx build-sprite ./my-icons ./static/assets/sprite.svg
 
 ---
 
+## 🎨 Color Handling
+
+By default, `tiny-isprite` converts single-color icons to use `fill="currentColor"` — allowing easy styling via CSS or Tailwind.
+
+If you want to **preserve original colors** in multicolor icons (e.g. logos, illustrations), use:
+
+```bash
+npx build-sprite --preserve-colored
+```
+
+- This flag keeps multi-fill SVGs untouched.
+- Monochrome icons will still be optimized for styling.
+
+Example:
+
+```
+🎨 Icon 'vite.svg' detected as multicolor — preserved.
+✅ sprite.svg created with 8 icons
+```
+
+---
+
 ## ❓ FAQ
 
 **Q: My icon doesn't show up, what's wrong?**  
 A: Ensure that:
+
 - `sprite.svg` is located in your `public/` folder.
 - You are using the correct `name` prop (matching your SVG filename).
 - Check browser DevTools for any 404 errors.
@@ -134,18 +157,20 @@ A: Yes! The `<Icon />` component supports `className` prop for full control.
 
 ## ⚙️ Props
 
-| Prop        | Type       | Default | Description                            |
-|-------------|------------|---------|----------------------------------------|
-| `name`      | `string`   | —       | Icon name (corresponds to ID in sprite) |
-| `size`      | `number`   | `24`    | Width and height of SVG                |
-| `className` | `string`   | —       | Optional CSS/Tailwind classes          |
-| `external`  | `boolean`  | `false` | Use external sprite instead of inline  |
+| Prop        | Type      | Default | Description                             |
+| ----------- | --------- | ------- | --------------------------------------- |
+| `name`      | `string`  | —       | Icon name (corresponds to ID in sprite) |
+| `size`      | `number`  | `24`    | Width and height of SVG                 |
+| `className` | `string`  | —       | Optional CSS/Tailwind classes           |
+| `external`  | `boolean` | `false` | Use external sprite instead of inline   |
 
 ---
 
 ## 🚧 Roadmap
+
 - [x] Basic CLI support
 - [x] Argument handling
+- [x] Preserve color in multicolor icons (`--preserve-colored`)
 - [ ] Watch mode for auto-regeneration
 - [ ] Add tests
 - [ ] Example project (StackBlitz)
@@ -155,4 +180,6 @@ A: Yes! The `<Icon />` component supports `className` prop for full control.
 ## 🧩 License
 
 MIT — © 2025 [Dina](https://github.com/YOUR_USERNAME)
+
+
 
