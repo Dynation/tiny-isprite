@@ -2,13 +2,13 @@
   "name": "tiny-isprite",
   "version": "1.0.3",
   "type": "module",
-  "main": "./dist/Icon.cjs",
+  "main": "./dist/index.js",
   "module": "./dist/Icon.js",
   "types": "./dist/Icon.d.ts",
   "exports": {
     ".": {
       "import": "./dist/Icon.js",
-      "require": "./dist/Icon.cjs"
+      "require": "./dist/index.js"
     }
   },
   "sideEffects": false,
@@ -16,7 +16,7 @@
     "build-sprite": "./bin/generate-sprite.js"
   },
   "scripts": {
-    "build": "tsup src/Icon.tsx --format esm,cjs --dts --external react",
+    "build": "tsup src/Icon.tsx --format esm,cjs --dts --external react && cp src/wrapper/index.js dist/index.js",
     "build:sprite": "node ./bin/generate-sprite.js"
   },
   "keywords": [
@@ -43,4 +43,3 @@
     "react": "^17 || ^18 || ^19"
   }
 }
-
