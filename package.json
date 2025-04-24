@@ -1,6 +1,6 @@
 {
   "name": "tiny-isprite",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/Icon.js",
@@ -16,11 +16,11 @@
     "build-sprite": "./bin/generate-sprite.js"
   },
   "files": [
-  "dist",
-  "bin",
-  "LICENSE.md",
-  "README.md"
-],
+    "dist",
+    "bin",
+    "LICENSE.md",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsup src/Icon.tsx --format esm,cjs --dts --external react && cp src/wrapper/index.js dist/index.js",
     "build:sprite": "node ./bin/generate-sprite.js"
