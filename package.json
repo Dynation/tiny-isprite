@@ -13,7 +13,7 @@
   },
   "sideEffects": false,
   "bin": {
-    "build-sprite": "./bin/generate-sprite.js"
+    "build-sprite": "./bin/build-sprite.js"
   },
   "files": [
     "dist",
