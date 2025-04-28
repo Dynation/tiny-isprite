@@ -1,185 +1,158 @@
-## 🧩 tiny-isprite
+# 🧩 tiny-isprite 2.0.0
 
-![npm](https://img.shields.io/npm/v/tiny-isprite) ![license](https://img.shields.io/npm/l/tiny-isprite)
+![npm](https://img.shields.io/npm/v/tiny-isprite) ![license](https://img.shields.io/npm/l/tiny-isprite) ![downloads](https://img.shields.io/npm/dm/tiny-isprite)
 
-> Lightweight React SVG sprite component for projects using Vite, Next.js or Turbopack.
+> ⚡️ Lightweight & Flexible React SVG Sprite Generator and Component for Vite, Next.js, Turbopack.
 
-`tiny-isprite` helps you render SVG icons via `<use>` from a generated sprite — no more bloated icon imports, just one cached SVG for all your icons.
-
-> ⚡️ _Why bloat your bundle with dozens of SVG imports?_
-> Use `tiny-isprite` and let your icons stay... tiny! 😄
+`tiny-isprite` v2.0 — not just a component, but a tool for generating optimized SVG sprites with color customization, CSS variables, and minification support.
 
 ---
 
-## 💡 Why use `tiny-isprite`?
-
-Modern frontend apps often import dozens of icons like this:
-
-```tsx
-import StarIcon from './icons/star.svg';
-```
-
-But this causes:
-- ❌ Every icon adds bytes to your JS bundle
-- ❌ Styling via CSS or Tailwind is tricky
-- ❌ Harder to change icon sets globally
-
-**SVG sprite solves this**:
-
-✅ All icons are combined into a single file (`sprite.svg`)  
-✅ Loaded once and cached forever  
-✅ Icons are injected with `<use>` — clean, tiny, and styleable
+## 🚀 Features
+- 🔹 **CLI** with flexible arguments
+- 🎨 Supports `currentColor` for icon styling
+- 🖍️ Preserve multicolor icons (`--preserve-colored`)
+- 🧩 Convert to CSS variables (`--use-css-vars`)
+- ✂️ Minify SVG (`--minify`)
+- ⚛️ React component for easy usage
 
 ---
 
-## ⚡ How It Works
-
-`tiny-isprite` leverages native **SVG Sprites** technology. Instead of embedding full SVG code for each icon, it references symbols inside a single `sprite.svg` file using the `<use>` tag:
-
-```html
-<svg width="24" height="24">
-  <use href="/sprite.svg#icon-star"></use>
-</svg>
+## 📦 Installation
+```bash
+npm install tiny-isprite
 ```
-
-This means:
-- One HTTP request for all icons
-- Better caching
-- Smaller JavaScript bundles
-- Easy styling with CSS/Tailwind
-
-All you need is to generate `sprite.svg` from your raw icons and use the provided `<Icon />` component.
 
 ---
 
-## 📂 Recommended Project Structure
+## ⚡ Quick CLI Usage
 
-Place your raw `.svg` icons in a dedicated `icons/` folder (outside of `public`).
-
-Example:
-
-```
-my-project/
-├── icons/              # Source SVG files
-│   ├── star.svg
-│   └── heart.svg
-├── public/            
-│   └── sprite.svg      # Generated file (DO NOT edit manually)
-```
-
-The `public/` folder should only contain the generated `sprite.svg`.  
-Do **not** place raw icons inside `public/icons`.
-
----
-
-## 🚀 Quick Start
-
-1. Place your `.svg` files in `/icons/` folder.  
-2. Run:
+1. Place your `.svg` icons in the `icons/` folder.
+2. Run the generator:
 
 ```bash
 npx build-sprite
 ```
 
-3. Use in React:
+### 🔧 Example with arguments:
+```bash
+npx build-sprite ./assets/icons ./public/sprite.svg --preserve-colored --prefix custom- --minify
+```
+
+| Argument              | Description                                         |
+|-----------------------|-----------------------------------------------------|
+| `srcDir`              | Directory with icons (`./icons` by default)         |
+| `outputFile`          | Output sprite file (`./public/sprite.svg`)          |
+| `--preserve-colored`  | Preserve multicolor icons                           |
+| `--use-css-vars`      | Convert fill/stroke to CSS variables                |
+| `--minify`            | Minify sprite                                       |
+| `--prefix <prefix>`   | Prefix for icon IDs                                 |
+
+---
+
+## ⚛️ React Usage
 
 ```tsx
 import { Icon } from 'tiny-isprite';
 
-<Icon name="star" size={32} external />
+<Icon name="star" size={32} className="text-blue-500" external />
 ```
 
 ---
 
-## ⚡ Using build-sprite with Custom Paths
+## 🎨 Advanced: Using CSS Variables
 
-By default, the command:
+Generate sprite with CSS variables support:
 
 ```bash
-npx build-sprite
+npx build-sprite --use-css-vars
 ```
 
-- Reads icons from: `./icons/`
-- Outputs to: `./public/sprite.svg`
+### Example CSS:
 
-If you want to specify custom folders:
+```css
+:root {
+  --icon-fill: #4ade80;
+  --icon-stroke: #1e40af;
+}
 
-```bash
-npx build-sprite ./my-icons ./static/assets/sprite.svg
+.custom-icon {
+  --icon-fill: red;
+  --icon-stroke: black;
+}
 ```
 
-- First argument = source folder  
-- Second argument = output file path
-
----
-
-## 🎨 Color Handling
-
-By default, `tiny-isprite` converts single-color icons to use `fill="currentColor"` — allowing easy styling via CSS or Tailwind.
-
-If you want to **preserve original colors** in multicolor icons (e.g. logos, illustrations), use:
-
-```bash
-npx build-sprite --preserve-colored
-```
-
-- This flag keeps multi-fill SVGs untouched.
-- Monochrome icons will still be optimized for styling.
-
-Example:
-
-```
-🎨 Icon 'vite.svg' detected as multicolor — preserved.
-✅ sprite.svg created with 8 icons
-```
-
----
-
-## ❓ FAQ
-
-**Q: My icon doesn't show up, what's wrong?**  
-A: Ensure that:
-
-- `sprite.svg` is located in your `public/` folder.
-- You are using the correct `name` prop (matching your SVG filename).
-- Check browser DevTools for any 404 errors.
-
----
-
-**Q: Can I style icons with Tailwind or CSS?**  
-A: Yes! The `<Icon />` component supports `className` prop for full control.
+### Usage:
 
 ```tsx
-<Icon name="heart" className="text-red-500 hover:text-pink-400" />
+<Icon name="folder" size={48} className="custom-icon" external />
+```
+
+➡️ Easily adapt colors to themes or component context!
+
+---
+
+### 🌈 Tailwind CSS Example
+
+**Important:**  
+For `currentColor` to work, the icon must inherit color from a parent element or have it defined via CSS.
+
+1. **Works** — when the icon is inside a parent with a Tailwind color class:
+
+```tsx
+<p className="text-green-700">
+   Made by Dina 
+   <Icon name="mono-heart" size={64} external />
+</p>
+```
+
+2. **Doesn't work** — if you apply the class directly to the icon:
+
+```tsx
+<Icon name="mono-heart" size={64} external className="text-red-800" />
+```
+*This won't change the color because the SVG `<use>` element doesn't directly accept Tailwind classes.*
+
+3. **Solution via CSS:**
+
+```css
+:root {
+  --all-mono-heart-fill-1: currentColor;
+}
+```
+
+```tsx
+<p className="text-green-700">
+   Made by Dina 
+   <Icon name="mono-heart" size={64} external className="text-red-800" />
+</p>
+```
+
+*In this case, the icon will take the color from the `text-red-800` class.*
+
+---
+
+## 📂 Recommended Structure
+```
+my-app/
+├── icons/              # Your raw SVG icons
+├── public/
+│   └── sprite.svg      # Generated sprite
+└── src/
 ```
 
 ---
 
-## ⚙️ Props
-
-| Prop        | Type      | Default | Description                             |
-| ----------- | --------- | ------- | --------------------------------------- |
-| `name`      | `string`  | —       | Icon name (corresponds to ID in sprite) |
-| `size`      | `number`  | `24`    | Width and height of SVG                 |
-| `className` | `string`  | —       | Optional CSS/Tailwind classes           |
-| `external`  | `boolean` | `false` | Use external sprite instead of inline   |
-
----
-
-## 🚧 Roadmap
-
-- [x] Basic CLI support
-- [x] Argument handling
-- [x] Preserve color in multicolor icons (`--preserve-colored`)
-- [ ] Watch mode for auto-regeneration
-- [ ] Add tests
-- [ ] Example project (StackBlitz)
+## 🛠 Roadmap
+- [x] CLI arguments
+- [x] CSS Variables
+- [x] Tailwind integration example
+- [ ] Watch Mode
+- [ ] StackBlitz Demo
+- [ ] TypeScript improvements
 
 ---
 
-## 🧩 License
-
-MIT — © 2025 [Dina](https://github.com/YOUR_USERNAME)
-
-
+## 📄 License
+MIT — © 2025 [Dina](https://github.com/Dynation)
 

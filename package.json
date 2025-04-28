@@ -29,12 +29,22 @@
     "svg",
     "sprite",
     "icon",
-    "react",
-    "svg-sprite",
     "icons",
-    "tiny",
+    "react",
+    "component",
+    "svg-sprite",
+    "icon-library",
+    "cli-tool",
     "vite",
-    "nextjs"
+    "nextjs",
+    "turbopack",
+    "tailwind",
+    "css-variables",
+    "currentColor",
+    "optimizer",
+    "minify",
+    "frontend",
+    "design-system"
   ],
   "author": "Dina",
   "license": "MIT",
@@ -47,5 +57,8 @@
   },
   "peerDependencies": {
     "react": "^17 || ^18 || ^19"
+  },
+  "dependencies": {
+    "commander": "^13.1.0"
   }
 }
