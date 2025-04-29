@@ -18,6 +18,7 @@
   "files": [
     "dist",
     "bin",
+    "core",
     "LICENSE.md",
     "README.md"
   ],
@@ -60,5 +61,12 @@
   },
   "dependencies": {
     "commander": "^13.1.0"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/username/tiny-isprite"
   }
 }

@@ -1,0 +1,1 @@
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none"> <symbol id="icon-test1" viewBox="0 0 24 24"> <path fill="var(--test1-fill-1)" d="M12 2L2 22h20L12 2z"/> </symbol> <symbol id="icon-test2" viewBox="0 0 24 24"> <circle fill="var(--test2-fill-1)" cx="12" cy="12" r="10"/> </symbol> </svg>

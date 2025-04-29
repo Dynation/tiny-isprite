@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { Command } from 'commander';
-import { generateSprite } from '../core/generate-sprite.js.js';  // Логіку винесемо сюди
+import { generateSprite } from '../core/generate-sprite.js';  // Логіку винесемо сюди
 
 const program = new Command();
 

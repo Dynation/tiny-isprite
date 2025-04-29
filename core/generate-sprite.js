@@ -1,4 +1,5 @@
-// core/generate-css-vars.js
+import fs from 'fs/promises';
+import path from 'path';
 
 export async function processSvgWithCssVars(svgContent, iconId, variablesMap, allMode = false) {
   let counter = { fill: 1, stroke: 1 };
@@ -21,8 +22,7 @@ export function generateCssFileContent(variablesMap) {
   return `:root {\n${Array.from(variablesMap).join('\n')}\n}`;
 }
 
-import fs from 'fs/promises';
-import path from 'path';
+
 
 export async function generateSprite({
   srcDir = './public/icons',
@@ -57,28 +57,37 @@ export async function generateSprite({
 
     const variablesMap = new Set();
 
-    const symbols = await Promise.all(
-      files.map(async file => {
+    const batchSize = 10;
+    const batches = [];
+    for (let i = 0; i < files.length; i += batchSize) {
+      batches.push(files.slice(i, i + batchSize));
+    }
+
+    const symbols = await Promise.all(batches.map(async (batch) => {
+      const results = [];
+      for (const file of batch) {
         const content = await fs.readFile(path.join(srcDir, file), 'utf8');
         const id = path.basename(file, '.svg');
-        const multicolor = await isMulticolor(content);
-
+        const hasMultipleColors = await isMulticolor(content);
         let cleaned = sanitizeSvg(content);
 
         if (forceAllVars) {
           cleaned = await processSvgWithCssVars(cleaned, id, variablesMap, true);
-        } else if (useCssVars && !multicolor) {
+        } else if (useCssVars && !hasMultipleColors) {
           cleaned = await processSvgWithCssVars(cleaned, id, variablesMap);
-        } else if (!multicolor && !preserveColored) {
+        } else if (!hasMultipleColors && !preserveColored) {
           cleaned = cleaned.replace(/fill=\"(?!none|currentColor|url\()[^\"]+\"/gi, 'fill="currentColor"');
         }
 
         const viewBoxMatch = content.match(/viewBox=\"([^\"]+)\"/);
-        const viewBox = viewBoxMatch ? `viewBox="${viewBoxMatch[1]}"` : '';
+        const viewBox = viewBoxMatch && viewBoxMatch[1].split(' ').length === 4
+          ? `viewBox="${viewBoxMatch[1]}"`
+          : 'viewBox="0 0 24 24"';
 
-        return `<symbol id="${prefix}${id}" ${viewBox}>\n${cleaned}\n</symbol>`;
-      })
-    );
+        results.push(`<symbol id="${prefix}${id}" ${viewBox}>\n${cleaned}\n</symbol>`);
+      }
+      return results;
+    })).then(results => results.flat());
 
     let sprite = `<svg xmlns=\"http://www.w3.org/2000/svg\" style=\"display:none\">\n${symbols.join('\n')}\n</svg>`;
 
@@ -90,8 +99,10 @@ export async function generateSprite({
     console.log(`✅ Sprite with ${files.length} icons saved to ${outputFile}`);
 
     if ((useCssVars || forceAllVars) && variablesMap.size) {
-      await fs.writeFile('./icons-vars.css', generateCssFileContent(variablesMap), 'utf8');
-      console.log(`🎨 CSS variables saved to ${srcDir}`);
+      // Исправить путь для CSS файла
+      const cssPath = path.join(path.dirname(outputFile), 'icons-vars.css');
+      await fs.writeFile(cssPath, generateCssFileContent(variablesMap), 'utf8');
+      console.log(`🎨 CSS variables saved to ${cssPath}`);
     }
 
   } catch (err) {
