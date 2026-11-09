@@ -1,14 +1,24 @@
 {
   "name": "tiny-isprite",
-  "version": "2.0.1",
+  "version": "2.1.0",
   "type": "module",
-  "main": "./dist/index.js",
+  "main": "./dist/Icon.cjs",
   "module": "./dist/Icon.js",
   "types": "./dist/Icon.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/Icon.js",
-      "require": "./dist/index.js"
+      "import": {
+        "types": "./dist/Icon.d.ts",
+        "default": "./dist/Icon.js"
+      },
+      "require": {
+        "types": "./dist/Icon.d.cts",
+        "default": "./dist/Icon.cjs"
+      }
+    },
+    "./generator": {
+      "types": "./core/generate-sprite.d.ts",
+      "import": "./core/generate-sprite.js"
     }
   },
   "sideEffects": false,
@@ -23,38 +33,37 @@
     "README.md"
   ],
   "scripts": {
-    "build": "tsup src/Icon.tsx --format esm,cjs --dts --external react && cp src/wrapper/index.js dist/index.js",
-    "build:sprite": "node ./bin/generate-sprite.js"
+    "build": "tsup src/Icon.tsx --format esm,cjs --dts --external react --clean",
+    "build:sprite": "node ./bin/build-sprite.js",
+    "test": "npm run build && node --test test/*.test.js",
+    "typecheck": "tsc --noEmit",
+    "test:browser": "npm run build && node test/browser.mjs",
+    "prepack": "npm run build",
+    "test:compat": "npm run build && node test/compatibility.mjs",
+    "test:production": "node test/production.mjs",
+    "check:release": "npm run typecheck && npm test && npm run test:compat && npm run test:browser && npm run test:production && npm audit"
   },
   "keywords": [
     "svg",
-    "sprite",
-    "icon",
-    "icons",
-    "react",
-    "component",
     "svg-sprite",
-    "icon-library",
-    "cli-tool",
-    "vite",
-    "nextjs",
-    "turbopack",
-    "tailwind",
-    "css-variables",
-    "currentColor",
-    "optimizer",
-    "minify",
-    "frontend",
-    "design-system"
+    "svg-icons",
+    "react",
+    "react-icons",
+    "sprite-generator"
   ],
   "author": "Dina",
   "license": "MIT",
-  "description": "Lightweight React component for using SVG sprites with Next.js, Vite and Turbopack.",
+  "description": "SVG sprite generator and React icon component with content-hashed URLs and watch mode.",
   "devDependencies": {
+    "@playwright/test": "^1.56.1",
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.2",
+    "@vitejs/plugin-react": "^4.7.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
     "tsup": "^8.4.0",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "vite": "^6.4.6"
   },
   "peerDependencies": {
     "react": "^17 || ^18 || ^19"
@@ -63,10 +72,14 @@
     "commander": "^13.1.0"
   },
   "engines": {
-    "node": ">=16.0.0"
+    "node": ">=18"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/username/tiny-isprite"
-  }
+    "url": "https://github.com/Dynation/tiny-isprite.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Dynation/tiny-isprite/issues"
+  },
+  "homepage": "https://github.com/Dynation/tiny-isprite#readme"
 }
