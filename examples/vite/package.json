@@ -1,0 +1,27 @@
+{
+  "name": "tiny-isprite-vite-example",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "sprite": "build-sprite ./icons ./public/assets/sprite.svg --manifest ./src/generated/sprite.js --public-path /demo/assets/ --prefix demo-",
+    "sprite:watch": "npm run sprite -- --watch",
+    "predev": "npm run sprite",
+    "dev": "vite dev",
+    "prebuild": "npm run sprite",
+    "build": "vite build",
+    "start": "vite preview"
+  },
+  "dependencies": {
+    "tiny-isprite": "file:../..",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "vite": "6.4.6",
+    "@vitejs/plugin-react": "4.7.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

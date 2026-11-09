@@ -16,3 +16,13 @@ yarn-error.log*
 # OS
 .DS_Store
 Thumbs.db
+
+# Temporary browser test applications
+.browser-*/
+
+# Example builds and generated sprites
+examples/*/public/
+examples/*/src/generated/
+examples/*/dist/
+examples/*/.next/
+.release-artifacts/
