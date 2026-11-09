@@ -8,7 +8,7 @@ permissions:
 jobs:
   compatibility:
     name: Node ${{ matrix.node }} / React 17, 18, 19
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
@@ -25,7 +25,7 @@ jobs:
       - run: npm run test:compat
   production:
     name: Browser, Vite and Next.js production
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
