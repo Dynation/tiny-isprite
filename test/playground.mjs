@@ -761,6 +761,7 @@ try {
   console.log(
     "PASS generated standalone component changes actual fill through compiled Tailwind theme tokens without replacing SVG markup",
   );
+  await page.getByRole("tab", { name: "Fill animation", exact: true }).click();
   // Optional shape-following animation leaves the exported vector untouched.
   const vectorBeforeFlow = await page
     .locator(".selected-artwork path")
@@ -785,6 +786,41 @@ try {
     await targetSvg.evaluate((el) => el.style.maskImage),
     /data:image\/png/,
   );
+  await page
+    .locator(".icon-inspector")
+    .evaluate((el) => el.scrollIntoView({ block: "start" }));
+  async function assertTimelineAndArtworkVisible() {
+    const preview = await page.locator(".selected-preview").boundingBox();
+    const timeline = await page.locator(".animation-playback").boundingBox();
+    const viewport = page.viewportSize();
+    assert.ok(
+      preview.y >= 0 && preview.y + preview.height <= viewport.height,
+      "entire preview visible with timeline",
+    );
+    assert.ok(
+      timeline.y >= 0 && timeline.y + timeline.height <= viewport.height,
+      "timeline visible with preview",
+    );
+  }
+  await assertTimelineAndArtworkVisible();
+  assert.ok(
+    await page
+      .locator(".fill-animation")
+      .evaluate(
+        (el) =>
+          el
+            .querySelector(".animation-playback")
+            .compareDocumentPosition(el.querySelector(".animation-controls")) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ),
+  );
+  await page.locator(".inspector-controls").evaluate((el) => {
+    el.scrollTop = el.scrollHeight;
+  });
+  await assertTimelineAndArtworkVisible();
+  await page.locator(".inspector-controls").evaluate((el) => {
+    el.scrollTop = 0;
+  });
   await animationProgress.fill("50");
   await poll(async () => {
     const text = await page.locator(".animation-status").textContent();
@@ -796,6 +832,51 @@ try {
       .locator(".selected-artwork path")
       .evaluateAll((elements) => elements.map((el) => el.getAttribute("d"))),
     vectorBeforeFlow,
+  );
+  await page.getByRole("tab", { name: "Colors", exact: true }).click();
+  assert.equal(await targetSvg.evaluate((el) => el.style.maskImage), "");
+  assert.equal(
+    await page
+      .getByRole("tabpanel", { name: "Colors", exact: true })
+      .isVisible(),
+    true,
+  );
+  await page.getByRole("tab", { name: "Fill animation", exact: true }).click();
+  await poll(() => playFill.isEnabled(), "restored animation panel");
+  assert.equal(await animationProgress.inputValue(), "50");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await poll(() => playFill.isEnabled(), "responsive mask prepared");
+  await page
+    .locator(".icon-inspector")
+    .evaluate((el) => el.scrollIntoView({ block: "start" }));
+  await assertTimelineAndArtworkVisible();
+  await animationProgress.fill("60");
+  await assertTimelineAndArtworkVisible();
+  await page.screenshot({
+    path: path.join(artifacts, "animation-tabs-mobile.png"),
+  });
+  for (const viewport of [
+    { width: 1024, height: 768 },
+    { width: 768, height: 768 },
+    { width: 320, height: 667 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await poll(() => playFill.isEnabled(), "resized animation field");
+    await page
+      .locator(".icon-inspector")
+      .evaluate((el) => el.scrollIntoView({ block: "start" }));
+    await assertTimelineAndArtworkVisible();
+    assert.equal(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth > innerWidth,
+      ),
+      false,
+    );
+  }
+  await page.setViewportSize({ width: 1440, height: 1080 });
+  await poll(() => playFill.isEnabled(), "desktop mask restored");
+  console.log(
+    "PASS Colors/Fill animation tabs preserve state; timeline precedes effects and stays visible with artwork on desktop/mobile",
   );
   const animationGroups = await page
     .locator(".animation-tracks fieldset > code")
@@ -926,6 +1007,7 @@ try {
     );
   }
 
+  await page.getByRole("tab", { name: "Colors", exact: true }).click();
   await page.screenshot({
     path: path.join(artifacts, "logo-editor.png"),
     fullPage: true,

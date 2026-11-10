@@ -6,7 +6,13 @@ import {
 } from "./lib/fill-animation.js";
 import { download } from "./lib/project.js";
 
-export function FillAnimation({ svg, variables, targetRef, aspectRatio }) {
+export function FillAnimation({
+  svg,
+  variables,
+  targetRef,
+  aspectRatio,
+  active = true,
+}) {
   const [enabled, setEnabled] = useState(false);
   const [mode, setMode] = useState("flow");
   const [x, setX] = useState(50),
@@ -14,6 +20,7 @@ export function FillAnimation({ svg, variables, targetRef, aspectRatio }) {
   const [settings, setSettings] = useState({});
   const [progress, setProgress] = useState(100);
   const [prepared, setPrepared] = useState(null);
+  const [viewportRatio, setViewportRatio] = useState(aspectRatio);
   const [error, setError] = useState("");
   const [playing, setPlaying] = useState(false);
   const [reduced, setReduced] = useState(
@@ -68,14 +75,28 @@ export function FillAnimation({ svg, variables, targetRef, aspectRatio }) {
       clearMask();
     };
   }, []);
+  // Match the raster mask to the actual SVG viewport, including letterboxing.
+  useEffect(() => {
+    const target = targetRef.current?.querySelector("svg");
+    if (!target || !active) return;
+    const measure = () => {
+      const rect = target.getBoundingClientRect();
+      if (rect.width > 0 && rect.height > 0)
+        setViewportRatio(rect.height / rect.width);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [svg, active]);
   useEffect(() => {
     stop();
     setPrepared(null);
     setError("");
     clearMask();
-    if (!enabled || !svg) return;
+    if (!enabled || !svg || !active) return;
     let disposed = false;
-    prepareFillField(svg, variables, x, y, aspectRatio)
+    prepareFillField(svg, variables, x, y, viewportRatio)
       .then((value) => {
         if (!disposed) setPrepared(value);
       })
@@ -86,13 +107,13 @@ export function FillAnimation({ svg, variables, targetRef, aspectRatio }) {
       disposed = true;
       clearMask();
     };
-  }, [enabled, svg, x, y]);
+  }, [enabled, svg, x, y, active, viewportRatio]);
   useEffect(() => {
     stop();
   }, [mode, signature]);
   useEffect(() => {
     const target = targetRef.current?.querySelector("svg");
-    if (!enabled || !prepared || !target) return;
+    if (!enabled || !prepared || !target || !active) return;
     const result = drawFillMask(
       prepared,
       tracks,
@@ -109,10 +130,10 @@ export function FillAnimation({ svg, variables, targetRef, aspectRatio }) {
     target.style.maskRepeat = "no-repeat";
     target.style.cursor = "crosshair";
     setStats({ revealed: result.revealed, painted: result.painted });
-  }, [enabled, prepared, progress, mode, signature]);
+  }, [enabled, prepared, progress, mode, signature, active]);
   useEffect(() => {
     const target = targetRef.current?.querySelector("svg");
-    if (!enabled || !target) return;
+    if (!enabled || !target || !active) return;
     function selectPoint(event) {
       const bounds = target.getBoundingClientRect();
       stop();
@@ -135,7 +156,7 @@ export function FillAnimation({ svg, variables, targetRef, aspectRatio }) {
     }
     target.addEventListener("click", selectPoint);
     return () => target.removeEventListener("click", selectPoint);
-  }, [enabled, svg]);
+  }, [enabled, svg, active]);
   function play() {
     if (playing) {
       stop();
@@ -187,6 +208,39 @@ export function FillAnimation({ svg, variables, targetRef, aspectRatio }) {
       </label>
       {enabled && (
         <>
+          <div className="animation-playback">
+            <button
+              type="button"
+              className="button secondary"
+              disabled={!prepared || !!error}
+              onClick={play}
+            >
+              {playing ? "Pause fill" : "Play fill"}
+            </button>
+            <label>
+              Timeline {Math.round(progress)}% ·{" "}
+              {((progress * total) / 100).toFixed(2)} / {total.toFixed(2)} s
+              <input
+                aria-label="Fill animation progress"
+                type="range"
+                min="0"
+                max="100"
+                step="1"
+                value={progress}
+                disabled={!prepared}
+                onChange={(event) => {
+                  stop();
+                  setProgress(Number(event.target.value));
+                }}
+              />
+            </label>
+          </div>
+          <div className="animation-status" role="status">
+            {error ||
+              (!prepared
+                ? "Preparing fill paths…"
+                : `${prepared.components.length} connected regions · ${stats.revealed} / ${stats.painted} painted samples visible`)}
+          </div>
           <p>
             Flow follows painted shapes around holes on a 320px analysis grid.
             Disconnected islands get their own inlet nearest your selected
@@ -315,39 +369,6 @@ export function FillAnimation({ svg, variables, targetRef, aspectRatio }) {
               them this controls all visible paint together.
             </p>
           )}
-          <div className="animation-playback">
-            <button
-              type="button"
-              className="button secondary"
-              disabled={!prepared || !!error}
-              onClick={play}
-            >
-              {playing ? "Pause fill" : "Play fill"}
-            </button>
-            <label>
-              Timeline {Math.round(progress)}% ·{" "}
-              {((progress * total) / 100).toFixed(2)} / {total.toFixed(2)} s
-              <input
-                aria-label="Fill animation progress"
-                type="range"
-                min="0"
-                max="100"
-                step="1"
-                value={progress}
-                disabled={!prepared}
-                onChange={(event) => {
-                  stop();
-                  setProgress(Number(event.target.value));
-                }}
-              />
-            </label>
-          </div>
-          <div className="animation-status" role="status">
-            {error ||
-              (!prepared
-                ? "Preparing fill paths…"
-                : `${prepared.components.length} connected regions · ${stats.revealed} / ${stats.painted} painted samples visible`)}
-          </div>
           {reduced && (
             <p>
               Reduced motion is enabled: Play shows the completed state. The

@@ -147,3 +147,17 @@ Tests cover a U-shaped obstacle, disconnected pieces and paint boundaries,
 overlapping/incomplete tracks, browser playback, origin changes, reduced motion,
 CSS download and cleanup. Optional local QA can supply PLAYGROUND_FLOW_LOGO
 for an additional complex text/logo SVG; that file is not committed or uploaded.
+
+## Editor layout
+
+Colors and Fill animation are sibling tabs beside the selected SVG. Playback and
+the timeline are the first animation controls, above Fill effect, origin and paint
+tracks. The control pane scrolls independently with sticky tabs/timeline; the
+preview stays alongside it on desktop and in a compact area above it on phones.
+Switching to Colors stops playback and clears the temporary preview mask without
+losing the animation's enabled state, timing settings or scrub position. Returning
+to animation restores the chosen frame. The mask analysis follows the measured
+SVG viewport (including letterboxing) and updates when that viewport resizes.
+
+Browser assertions cover simultaneous artwork/timeline visibility at desktop,
+tablet and phone widths, timeline order, scrolling and state across tab changes.

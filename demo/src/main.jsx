@@ -74,6 +74,12 @@ function App() {
   const [size, setSize] = useState(32);
 
   const [tab, setTab] = useState("react");
+  const [inspectorTab, setInspectorTab] = useState("colors");
+  const inspectorControls = useRef(null);
+  function selectInspectorTab(value) {
+    setInspectorTab(value);
+    if (inspectorControls.current) inspectorControls.current.scrollTop = 0;
+  }
   const [notice, setNotice] = useState("");
   const [reading, setReading] = useState(false);
   const [dragging, setDragging] = useState(false);
@@ -387,216 +393,278 @@ function App() {
             fits this canvas
           </small>
         </div>
-        <div className="palette-editor">
-          <h4>Colors you can change</h4>
-          <div className="theme-toggle" role="group" aria-label="Preview theme">
-            {["light", "dark"].map((value) => (
+        <div className="inspector-controls" ref={inspectorControls}>
+          <div
+            className="inspector-tabs"
+            role="tablist"
+            aria-label="Icon controls"
+          >
+            {[
+              ["colors", "Colors"],
+              ["animation", "Fill animation"],
+            ].map(([value, label], index) => (
               <button
-                key={value}
                 type="button"
-                aria-pressed={previewTheme === value}
-                onClick={() => setPreviewTheme(value)}
+                key={value}
+                role="tab"
+                id={`inspector-tab-${value}`}
+                aria-controls={`inspector-${value}`}
+                aria-selected={inspectorTab === value}
+                tabIndex={inspectorTab === value ? 0 : -1}
+                onClick={() => selectInspectorTab(value)}
+                onKeyDown={(event) => {
+                  const keys = ["colors", "animation"];
+                  const next =
+                    event.key === "ArrowRight" || event.key === "ArrowLeft"
+                      ? 1 - index
+                      : event.key === "Home"
+                        ? 0
+                        : event.key === "End"
+                          ? 1
+                          : null;
+                  if (next !== null) {
+                    event.preventDefault();
+                    selectInspectorTab(keys[next]);
+                    event.currentTarget.parentElement.children[next].focus();
+                  }
+                }}
               >
-                {value === "light" ? "Light preview" : "Dark preview"}
+                {label}
               </button>
             ))}
           </div>
-          <p>
-            Light and dark palettes belong to this icon. Switching themes keeps
-            the same SVG.
-          </p>
-          {options.mode !== "variables" ? (
-            <>
-              <p>
-                Create named CSS variables for this icon, then try each color.
-              </p>
-              <button
-                className="button secondary"
-                onClick={() =>
-                  setOptions((previous) => ({
-                    ...previous,
-                    mode: "variables",
-                    allColors: true,
-                  }))
-                }
-              >
-                Generate editable variables
-              </button>
-            </>
-          ) : variables.length ? (
-            <>
-              <p>Pick a color. Preview and downloads update together.</p>
-              {variables.map((variable) => (
-                <div className="variable-row" key={variable.name}>
-                  <label className="variable-picker">
-                    <input
-                      type="color"
-                      aria-label={`Color ${variable.name}`}
-                      value={colorHex(variable.value)}
-                      onChange={(event) =>
-                        setVariable(variable.name, event.target.value)
-                      }
-                    />
-                    <span>
-                      <b>{variable.property} · Light</b>
-                      <code>{variable.name}</code>
-                    </span>
-                  </label>
-                  <input
-                    className="variable-value"
-                    aria-label={`Value ${variable.name}`}
-                    key={`${variable.name}-${variable.value}`}
-                    defaultValue={colorHex(variable.value)}
-                    maxLength={7}
-                    pattern="#[0-9a-fA-F]{6}"
-                    onBlur={(event) => {
-                      const value = event.target.value;
-                      if (/^#[\da-f]{6}$/i.test(value))
-                        setVariable(variable.name, value);
-                      else event.target.value = colorHex(variable.value);
-                    }}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter") event.currentTarget.blur();
-                    }}
-                    onFocus={(event) => event.target.select()}
-                  />
-                  <div className="dark-variable-row">
+          <div
+            className="palette-editor inspector-panel"
+            id="inspector-colors"
+            role="tabpanel"
+            aria-labelledby="inspector-tab-colors"
+            hidden={inspectorTab !== "colors"}
+          >
+            <h4>Colors you can change</h4>
+            <div
+              className="theme-toggle"
+              role="group"
+              aria-label="Preview theme"
+            >
+              {["light", "dark"].map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  aria-pressed={previewTheme === value}
+                  onClick={() => setPreviewTheme(value)}
+                >
+                  {value === "light" ? "Light preview" : "Dark preview"}
+                </button>
+              ))}
+            </div>
+            <p>
+              Light and dark palettes belong to this icon. Switching themes
+              keeps the same SVG.
+            </p>
+            {options.mode !== "variables" ? (
+              <>
+                <p>
+                  Create named CSS variables for this icon, then try each color.
+                </p>
+                <button
+                  className="button secondary"
+                  onClick={() =>
+                    setOptions((previous) => ({
+                      ...previous,
+                      mode: "variables",
+                      allColors: true,
+                    }))
+                  }
+                >
+                  Generate editable variables
+                </button>
+              </>
+            ) : variables.length ? (
+              <>
+                <p>Pick a color. Preview and downloads update together.</p>
+                {variables.map((variable) => (
+                  <div className="variable-row" key={variable.name}>
                     <label className="variable-picker">
                       <input
                         type="color"
-                        aria-label={`Dark color ${variable.name}`}
-                        value={
-                          darkPalettes[current.name]?.[variable.name] ||
-                          darkColor(colorHex(variable.value))
-                        }
+                        aria-label={`Color ${variable.name}`}
+                        value={colorHex(variable.value)}
                         onChange={(event) =>
-                          setDarkVariable(variable.name, event.target.value)
+                          setVariable(variable.name, event.target.value)
                         }
                       />
                       <span>
-                        <b>{variable.property} · Dark</b>
+                        <b>{variable.property} · Light</b>
                         <code>{variable.name}</code>
                       </span>
                     </label>
                     <input
                       className="variable-value"
-                      aria-label={`Dark value ${variable.name}`}
-                      key={`dark-${variable.name}-${darkPalettes[current.name]?.[variable.name] || variable.value}`}
-                      defaultValue={
-                        darkPalettes[current.name]?.[variable.name] ||
-                        darkColor(colorHex(variable.value))
-                      }
+                      aria-label={`Value ${variable.name}`}
+                      key={`${variable.name}-${variable.value}`}
+                      defaultValue={colorHex(variable.value)}
                       maxLength={7}
+                      pattern="#[0-9a-fA-F]{6}"
                       onBlur={(event) => {
-                        if (/^#[\da-f]{6}$/i.test(event.target.value))
-                          setDarkVariable(variable.name, event.target.value);
-                        else
-                          event.target.value =
-                            darkPalettes[current.name]?.[variable.name] ||
-                            darkColor(colorHex(variable.value));
+                        const value = event.target.value;
+                        if (/^#[\da-f]{6}$/i.test(value))
+                          setVariable(variable.name, value);
+                        else event.target.value = colorHex(variable.value);
                       }}
                       onKeyDown={(event) => {
                         if (event.key === "Enter") event.currentTarget.blur();
                       }}
-                      onFocus={(event) => event.currentTarget.select()}
+                      onFocus={(event) => event.target.select()}
                     />
+                    <div className="dark-variable-row">
+                      <label className="variable-picker">
+                        <input
+                          type="color"
+                          aria-label={`Dark color ${variable.name}`}
+                          value={
+                            darkPalettes[current.name]?.[variable.name] ||
+                            darkColor(colorHex(variable.value))
+                          }
+                          onChange={(event) =>
+                            setDarkVariable(variable.name, event.target.value)
+                          }
+                        />
+                        <span>
+                          <b>{variable.property} · Dark</b>
+                          <code>{variable.name}</code>
+                        </span>
+                      </label>
+                      <input
+                        className="variable-value"
+                        aria-label={`Dark value ${variable.name}`}
+                        key={`dark-${variable.name}-${darkPalettes[current.name]?.[variable.name] || variable.value}`}
+                        defaultValue={
+                          darkPalettes[current.name]?.[variable.name] ||
+                          darkColor(colorHex(variable.value))
+                        }
+                        maxLength={7}
+                        onBlur={(event) => {
+                          if (/^#[\da-f]{6}$/i.test(event.target.value))
+                            setDarkVariable(variable.name, event.target.value);
+                          else
+                            event.target.value =
+                              darkPalettes[current.name]?.[variable.name] ||
+                              darkColor(colorHex(variable.value));
+                        }}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") event.currentTarget.blur();
+                        }}
+                        onFocus={(event) => event.currentTarget.select()}
+                      />
+                    </div>
                   </div>
-                </div>
-              ))}
-              <button
-                className="palette-copy"
-                disabled={!ready}
-                onClick={() => copy(paletteCode, "palette")}
-              >
-                {copied === "palette"
-                  ? "Copied CSS"
-                  : "Copy this icon’s CSS variables"}
-              </button>
-            </>
-          ) : (
-            <>
-              <p>
-                No fill/stroke variables were generated. Gradient stops and
-                embedded paint servers keep their source colors.
-              </p>
-              {!options.allColors && (
+                ))}
                 <button
-                  className="button secondary"
-                  onClick={() => update("allColors", true)}
+                  className="palette-copy"
+                  disabled={!ready}
+                  onClick={() => copy(paletteCode, "palette")}
                 >
-                  Generate multicolor palette
+                  {copied === "palette"
+                    ? "Copied CSS"
+                    : "Copy this icon’s CSS variables"}
                 </button>
-              )}
-            </>
-          )}
-          <label className="theme-foreground">
-            Dark currentColor{" "}
-            <input
-              type="color"
-              aria-label="Dark currentColor"
-              value={themeExample.foregroundDark}
-              onChange={(event) => {
-                setDarkForegrounds((previous) => ({
-                  ...previous,
-                  [current.name]: event.target.value,
-                }));
-                setPreviewTheme("dark");
-              }}
+              </>
+            ) : (
+              <>
+                <p>
+                  No fill/stroke variables were generated. Gradient stops and
+                  embedded paint servers keep their source colors.
+                </p>
+                {!options.allColors && (
+                  <button
+                    className="button secondary"
+                    onClick={() => update("allColors", true)}
+                  >
+                    Generate multicolor palette
+                  </button>
+                )}
+              </>
+            )}
+            <label className="theme-foreground">
+              Dark currentColor{" "}
+              <input
+                type="color"
+                aria-label="Dark currentColor"
+                value={themeExample.foregroundDark}
+                onChange={(event) => {
+                  setDarkForegrounds((previous) => ({
+                    ...previous,
+                    [current.name]: event.target.value,
+                  }));
+                  setPreviewTheme("dark");
+                }}
+              />
+            </label>
+            <p className="theme-help">
+              Use <b>globals.css / @theme</b> for light/dark design tokens, then{" "}
+              <b>Tailwind</b> for the component and toggle. SVG/React downloads
+              keep light defaults; theme examples contain both palettes.
+            </p>
+            <label className="inspector-control">
+              Line thickness{" "}
+              <input
+                aria-label="Line thickness"
+                type="range"
+                min="0"
+                max="8"
+                step="0.1"
+                value={options.strokeWidths[current.name] ?? 1.7}
+                onChange={(event) =>
+                  setOptions((previous) => ({
+                    ...previous,
+                    strokeWidths: {
+                      ...previous.strokeWidths,
+                      [current.name]: Number(event.target.value),
+                    },
+                  }))
+                }
+              />
+              <output>
+                {options.strokeWidths[current.name] ?? "Original"}
+              </output>
+            </label>
+            <label className="inspector-control">
+              Rotation{" "}
+              <input
+                aria-label="Rotation"
+                type="range"
+                min="-180"
+                max="180"
+                step="15"
+                value={rotation}
+                onChange={(event) => setRotation(Number(event.target.value))}
+              />
+              <output>{rotation}°</output>
+            </label>
+            <p className="field-note">
+              Line thickness affects SVG strokes. Filled silhouettes do not have
+              an outline to thicken. Copy ready-to-use React, CSS or Tailwind
+              examples below.
+            </p>
+          </div>
+          <div
+            className="inspector-panel"
+            id="inspector-animation"
+            role="tabpanel"
+            aria-labelledby="inspector-tab-animation"
+            hidden={inspectorTab !== "animation"}
+          >
+            <FillAnimation
+              key={current.name}
+              active={inspectorTab === "animation"}
+              svg={artifact?.selected?.svg || ""}
+              variables={variables}
+              targetRef={artworkRef}
+              aspectRatio={artifact?.selected?.aspectRatio || 1}
             />
-          </label>
-          <p className="theme-help">
-            Use <b>globals.css / @theme</b> for light/dark design tokens, then{" "}
-            <b>Tailwind</b> for the component and toggle. SVG/React downloads
-            keep light defaults; theme examples contain both palettes.
-          </p>
-          <label className="inspector-control">
-            Line thickness{" "}
-            <input
-              aria-label="Line thickness"
-              type="range"
-              min="0"
-              max="8"
-              step="0.1"
-              value={options.strokeWidths[current.name] ?? 1.7}
-              onChange={(event) =>
-                setOptions((previous) => ({
-                  ...previous,
-                  strokeWidths: {
-                    ...previous.strokeWidths,
-                    [current.name]: Number(event.target.value),
-                  },
-                }))
-              }
-            />
-            <output>{options.strokeWidths[current.name] ?? "Original"}</output>
-          </label>
-          <label className="inspector-control">
-            Rotation{" "}
-            <input
-              aria-label="Rotation"
-              type="range"
-              min="-180"
-              max="180"
-              step="15"
-              value={rotation}
-              onChange={(event) => setRotation(Number(event.target.value))}
-            />
-            <output>{rotation}°</output>
-          </label>
-          <p className="field-note">
-            Line thickness affects SVG strokes. Filled silhouettes do not have
-            an outline to thicken. Copy ready-to-use React, CSS or Tailwind
-            examples below.
-          </p>
+          </div>
         </div>
       </div>
-      <FillAnimation
-        key={current.name}
-        svg={artifact?.selected?.svg || ""}
-        variables={variables}
-        targetRef={artworkRef}
-        aspectRatio={artifact?.selected?.aspectRatio || 1}
-      />
     </section>
   );
   return (
