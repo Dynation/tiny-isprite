@@ -215,3 +215,26 @@ Downloads precede the React/Tailwind guides, package installation is near the en
 and the optional Ko-fi link follows exports without a popup or blocking step.
 The current Sites address remains the preview location; deployment does not
 change the audience or enable public access.
+
+### GitHub Pages
+
+Public demo: https://dynation.github.io/tiny-isprite/ . Pages serves compiled
+static files from the `gh-pages` branch at `/`. Source changes are reviewed in
+`master`; publishing build output does not merge a source PR or publish npm.
+
+Build specifically for this repository subpath:
+
+```sh
+VITE_BASE_PATH=/tiny-isprite/ npm run build:demo
+```
+
+Run the full browser/export suite under that same base before publishing:
+
+```sh
+VITE_BASE_PATH=/tiny-isprite/ npm run test:playground
+```
+
+Publish only `demo/dist/`, with `.nojekyll`, to `gh-pages`. Keep previously
+published hashed assets when updating, so already open tabs retain their imports.
+The default base remains `/` for the separate private Sites preview. The home
+link and favicon follow the configured base. No analytics provider is configured.

@@ -21,7 +21,7 @@ await mkdir(site);
 let server, browser, consumer;
 try {
   const port = await freePort(),
-    url = `http://127.0.0.1:${port}`;
+    url = `http://127.0.0.1:${port}${process.env.VITE_BASE_PATH || "/"}`;
   server = spawn(
     process.execPath,
     [

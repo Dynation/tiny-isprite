@@ -75,25 +75,10 @@ pre:focus-visible {
   color: var(--blue);
 }
 .brand-mark {
-  width: 30px;
-  height: 30px;
-  display: grid;
-  grid-template-columns: repeat(2, 10px);
-  grid-template-rows: repeat(2, 10px);
-  gap: 3px;
-  align-content: center;
-  justify-content: center;
-  transform: rotate(-5deg);
-}
-.brand-mark i {
-  background: var(--blue);
-  border-radius: 2px;
-}
-.brand-mark i:nth-child(2) {
-  opacity: 0.35;
-}
-.brand-mark i:nth-child(3) {
-  opacity: 0.65;
+  width: 32px;
+  height: 32px;
+  color: #426fe6;
+  transform: rotate(-8deg);
 }
 .header-label {
   font-size: 10px;
@@ -955,11 +940,8 @@ footer {
   letter-spacing: -0.6px;
 }
 .brand-mark.small {
-  width: 20px;
-  height: 20px;
-  grid-template-columns: repeat(2, 6px);
-  grid-template-rows: repeat(2, 6px);
-  gap: 2px;
+  width: 22px;
+  height: 22px;
 }
 footer > p {
   font-size: 11px;
@@ -2092,8 +2074,8 @@ html[data-page-theme="dark"] .stage-toolbar .section-label > span {
   background: #28364c;
   color: #b6c8e5;
 }
-html[data-page-theme="dark"] .brand-mark i {
-  background: #87a8ff;
+html[data-page-theme="dark"] .brand-mark {
+  color: #87a8ff;
 }
 html[data-page-theme="light"] {
   color-scheme: light;

@@ -53,6 +53,25 @@ function Glyph({ name, size = 18, ...props }) {
     </svg>
   );
 }
+function BrandMark({ small = false }) {
+  return (
+    <svg
+      className={`brand-mark${small ? " small" : ""}`}
+      viewBox="0 0 48 48"
+      aria-hidden="true"
+    >
+      <path
+        d="M36 10H22C9 10 9 24 22 24h4c13 0 13 14 0 14H12"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="10"
+        strokeLinecap="square"
+      />
+      <path d="M33 5h9l-5 10h-4z" fill="#bfd1ff" />
+      <path d="M7 33h10l-5 10H7z" fill="#426fe6" />
+    </svg>
+  );
+}
 function App() {
   const [pageTheme, setPageTheme] = useState(() => {
     try {
@@ -718,13 +737,12 @@ function App() {
   return (
     <div className="app-shell">
       <header className="header">
-        <a className="brand" href="/" aria-label="tiny-isprite home">
-          <span className="brand-mark">
-            <i />
-            <i />
-            <i />
-            <i />
-          </span>
+        <a
+          className="brand"
+          href={import.meta.env.BASE_URL}
+          aria-label="tiny-isprite home"
+        >
+          <BrandMark />
           <strong>
             tiny-isprite<span className="brand-dot">.</span>
           </strong>
@@ -1574,12 +1592,7 @@ function App() {
       </main>
       <footer>
         <a className="brand footer-brand" href={github}>
-          <span className="brand-mark small">
-            <i />
-            <i />
-            <i />
-            <i />
-          </span>
+          <BrandMark small />
           <strong>tiny-isprite.</strong>
         </a>
         <p>A little less icon chaos.</p>

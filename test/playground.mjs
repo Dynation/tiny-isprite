@@ -45,7 +45,7 @@ try {
     server.stderr.on("data", (data) => {
       serverLog += data;
     });
-    url = `http://127.0.0.1:${port}`;
+    url = `http://127.0.0.1:${port}${process.env.VITE_BASE_PATH || "/"}`;
     await poll(async () => {
       try {
         return (await fetch(url)).ok;
@@ -73,6 +73,20 @@ try {
     await dialog.dismiss();
   });
   await page.goto(url);
+  assert.equal(
+    new URL(
+      await page
+        .getByRole("link", { name: "tiny-isprite home" })
+        .getAttribute("href"),
+      url,
+    ).pathname,
+    process.env.VITE_BASE_PATH || "/",
+  );
+  const favicon = await page.locator('link[rel="icon"]').getAttribute("href");
+  assert.equal(
+    (await page.request.get(new URL(favicon, url).href)).status(),
+    200,
+  );
   await page
     .getByRole("button", { name: "Download React component", exact: true })
     .waitFor();
