@@ -36,3 +36,16 @@ Fixed strokes retain their color. Preview color affects currentColor only.
 
 Build output is dist/. There are no client-side routes. The hosting manifest
 identifies the owner-private Sites preview.
+
+## Single icon
+
+Choose **Single icon**, then select an icon to download a standalone `.svg` or
+`.jsx` component. This output needs neither a sprite nor tiny-isprite installed.
+It uses the same cleanup and color conversion engine. CSS variables carry inline
+fallback colors, so no stylesheet is required. Preview color is not baked into
+exports; `currentColor` inherits from the page. The size sets the exported defaults.
+
+Generated React components scope local IDs with `useId` (React 18+), preventing
+collisions when the same gradient, mask or clip-path icon is rendered twice. SVG
+files retain static local IDs; when manually pasting multiple SVGs into the same
+HTML document, namespace their IDs or use the generated React component.

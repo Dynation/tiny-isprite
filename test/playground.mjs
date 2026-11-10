@@ -1,3 +1,6 @@
+import { transformSync } from "esbuild";
+import React from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import assert from "node:assert/strict";
 import { chromium } from "@playwright/test";
 import { mkdtemp, mkdir, writeFile, readFile, rm } from "node:fs/promises";
@@ -145,15 +148,13 @@ try {
     async () => (await page.locator(".icon-card").count()) === 14,
     "SVG uploads",
   );
-  await page
-    .getByLabel("Upload SVG files", { exact: true })
-    .setInputFiles({
-      name: "badge.svg",
-      mimeType: "image/svg+xml",
-      buffer: Buffer.from(
-        '<svg viewBox="0 0 24 24"><circle fill="red" cx="12" cy="12" r="8"/></svg>',
-      ),
-    });
+  await page.getByLabel("Upload SVG files", { exact: true }).setInputFiles({
+    name: "badge.svg",
+    mimeType: "image/svg+xml",
+    buffer: Buffer.from(
+      '<svg viewBox="0 0 24 24"><circle fill="red" cx="12" cy="12" r="8"/></svg>',
+    ),
+  });
   await ready();
   await poll(
     async () => (await page.locator(".icon-card").count()) === 15,
@@ -164,13 +165,11 @@ try {
       .getByRole("button", { name: "Remove badge-2", exact: true })
       .count(),
   );
-  await page
-    .getByLabel("Upload SVG files", { exact: true })
-    .setInputFiles({
-      name: "broken.svg",
-      mimeType: "image/svg+xml",
-      buffer: Buffer.from("<svg><broken>"),
-    });
+  await page.getByLabel("Upload SVG files", { exact: true }).setInputFiles({
+    name: "broken.svg",
+    mimeType: "image/svg+xml",
+    buffer: Buffer.from("<svg><broken>"),
+  });
   await poll(
     async () =>
       (await page.locator(".notice").textContent()).includes("Not a valid SVG"),
@@ -196,13 +195,11 @@ try {
     "drag and drop upload",
   );
   await ready();
-  await page
-    .getByLabel("Upload SVG files", { exact: true })
-    .setInputFiles({
-      name: "oversized.svg",
-      mimeType: "image/svg+xml",
-      buffer: Buffer.alloc(129 * 1024, 32),
-    });
+  await page.getByLabel("Upload SVG files", { exact: true }).setInputFiles({
+    name: "oversized.svg",
+    mimeType: "image/svg+xml",
+    buffer: Buffer.alloc(129 * 1024, 32),
+  });
   await poll(
     async () =>
       (await page.locator(".notice").textContent()).includes("exceeds 128 KB"),
@@ -263,6 +260,100 @@ try {
   assert.deepEqual(result, manifest);
   console.log(
     "PASS upload cleanup, root attribute preservation, local gradients, duplicates and ZIP export reproduce published CLI bytes",
+  );
+  // Single output is independent of sprite settings and a package install.
+  await page.getByLabel("Asset path", { exact: true }).fill("../unsafe/");
+  await page.getByRole("radio", { name: "Single icon", exact: true }).check();
+  const singleReady = () =>
+    poll(
+      () =>
+        page
+          .getByRole("button", {
+            name: "Download React component",
+            exact: true,
+          })
+          .isEnabled(),
+      "single icon output",
+    );
+  await singleReady();
+  await page
+    .locator(".icon-select")
+    .filter({ hasText: /^gradient$/ })
+    .click();
+  await singleReady();
+  const component = await page.locator("#code-output").textContent();
+  assert.doesNotMatch(component, /tiny-isprite|sprite\.url|<symbol/);
+  assert.match(component, /useId/);
+  const compiled = transformSync(component, {
+    loader: "jsx",
+    jsx: "automatic",
+    format: "cjs",
+  }).code;
+  const compiledModule = { exports: {} };
+  new Function("module", "exports", "require", compiled)(
+    compiledModule,
+    compiledModule.exports,
+    createRequire(import.meta.url),
+  );
+  const Generated = compiledModule.exports.ExampleIcon;
+  const markup = renderToStaticMarkup(
+    React.createElement(
+      "div",
+      null,
+      React.createElement(Generated),
+      React.createElement(Generated),
+    ),
+  );
+  const idValues = [...markup.matchAll(/ id="([^"]+)"/g)].map(
+    (match) => match[1],
+  );
+  assert.equal(idValues.length, 2);
+  assert.equal(new Set(idValues).size, 2);
+  for (const id of idValues) assert.ok(markup.includes(`url(#${id})`));
+  await page.getByRole("tab", { name: "Inline SVG", exact: true }).click();
+  let standalone = await page.locator("#code-output").textContent();
+  assert.match(standalone, /^<svg/);
+  assert.match(standalone, /width="64"/);
+  assert.doesNotMatch(standalone, /<symbol|display:none|sprite\./);
+  await page
+    .locator(".icon-select")
+    .filter({ hasText: /^badge$/ })
+    .click();
+  await singleReady();
+  standalone = await page.locator("#code-output").textContent();
+  assert.match(standalone, /var\(--badge-fill-1, #ef4444\)/);
+  assert.doesNotMatch(standalone, /onload|script|foreignObject|evil\.invalid/);
+  await page.getByRole("radio", { name: /Keep original colors/ }).check();
+  await singleReady();
+  assert.match(
+    await page.locator("#code-output").textContent(),
+    /fill="#ef4444"/,
+  );
+  await page.getByRole("radio", { name: /Use currentColor/ }).check();
+  await singleReady();
+  assert.match(
+    await page.locator("#code-output").textContent(),
+    /fill="currentColor"/,
+  );
+  const svgDownloadEvent = page.waitForEvent("download");
+  await page.getByRole("button", { name: /Download standalone SVG/ }).click();
+  const svgDownload = await svgDownloadEvent.catch((error) => {
+    console.error({ errors, url: page.url() });
+    throw error;
+  });
+  assert.equal(svgDownload.suggestedFilename(), "badge.svg");
+  await svgDownload.saveAs(path.join(artifacts, "badge.svg"));
+  assert.equal(
+    await readFile(path.join(artifacts, "badge.svg"), "utf8"),
+    await page.locator("#code-output").textContent(),
+  );
+  await page.screenshot({
+    path: path.join(artifacts, "single-icon.png"),
+    fullPage: true,
+  });
+  await page.getByRole("radio", { name: "Sprite", exact: true }).check();
+  console.log(
+    "PASS standalone SVG/React export, color fallbacks, safe cleanup, unique React instance IDs and sprite mode recovery",
   );
   await page.getByLabel("Asset path", { exact: true }).fill("../unsafe/");
   await poll(

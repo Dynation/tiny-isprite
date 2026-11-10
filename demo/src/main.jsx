@@ -14,6 +14,7 @@ import {
   reactSnippet,
   validateOptions,
 } from "./lib/project.js";
+import { buildSingleIcon } from "./lib/single-icon.js";
 import "./style.css";
 
 const github = "https://github.com/Dynation/tiny-isprite";
@@ -51,6 +52,8 @@ function App() {
   const [icons, setIcons] = useState(() =>
     samples.map((icon) => ({ ...icon })),
   );
+  const [target, setTarget] = useState("sprite");
+  const single = target === "single";
   const [options, setOptions] = useState(defaultOptions);
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState("sparkle");
@@ -69,19 +72,32 @@ function App() {
   });
   const input = useRef(null);
   const copyTimer = useRef(null);
+  const current = icons.find((icon) => icon.name === selected) || icons[0];
   const signature = useMemo(
-    () => JSON.stringify({ icons, options }),
-    [icons, options],
+    () =>
+      JSON.stringify({
+        icons,
+        options,
+        target,
+        selected: single ? current?.name : null,
+        size: single ? size : null,
+      }),
+    [icons, options, target, selected, size],
   );
   useEffect(() => {
     let disposed = false;
     let url = "";
-    const error = validateOptions(options);
+    const error = single ? "" : validateOptions(options);
     setBuild((previous) => ({ ...previous, busy: true, error }));
     const timer = setTimeout(async () => {
       try {
         if (error) throw new Error(error);
-        const artifact = await buildProject(icons, options);
+        const artifact = await buildProject(
+          icons,
+          single ? { ...options, prefix: "icon-", publicPath: "/" } : options,
+        );
+        if (single && current)
+          artifact.single = await buildSingleIcon(current, options, size);
         if (disposed) return;
         url = URL.createObjectURL(
           new Blob([artifact.sprite], { type: "image/svg+xml" }),
@@ -107,7 +123,6 @@ function App() {
   const matches = icons.filter((icon) =>
     icon.name.includes(query.toLowerCase()),
   );
-  const current = icons.find((icon) => icon.name === selected) || icons[0];
   const artifact = build.artifact;
   const ready =
     artifact &&
@@ -117,14 +132,26 @@ function App() {
     icons.length > 0;
   const snippet =
     artifact && current
-      ? reactSnippet(artifact, current.name, size)
+      ? single
+        ? artifact.single?.component || ""
+        : reactSnippet(artifact, current.name, size)
       : "// Add an SVG to get started.";
   const code =
     tab === "react"
       ? snippet
       : tab === "sprite"
-        ? artifact?.sprite || ""
+        ? (single ? artifact?.single?.svg : artifact?.sprite) || ""
         : artifact?.module || "";
+  const tabs = single
+    ? [
+        ["react", "React component"],
+        ["sprite", "Inline SVG"],
+      ]
+    : [
+        ["react", "React usage"],
+        ["sprite", "SVG sprite"],
+        ["manifest", "Manifest"],
+      ];
   const update = (key, value) =>
     setOptions((previous) => ({ ...previous, [key]: value }));
   async function addFiles(files) {
@@ -231,7 +258,7 @@ function App() {
               All together<span>.</span>
             </h1>
             <p className="intro-copy">
-              Turn a folder of SVGs into one tiny sprite.
+              Build a sprite, or take one icon inline.
               <br />
               Preview it in React. Make it yours. Ship it.
             </p>
@@ -259,7 +286,7 @@ function App() {
           <div className="workspace-top">
             <div className="workspace-title">
               <Glyph name="grid" />
-              <h2>Sprite builder</h2>
+              <h2>Icon builder</h2>
               <span className="small-badge">LIVE PLAYGROUND</span>
             </div>
             <div className="workspace-actions">
@@ -304,35 +331,66 @@ function App() {
                 <h3>Make it yours</h3>
                 <span>01 — CONFIGURE</span>
               </div>
-              <label className="field-label" htmlFor="prefix">
-                Symbol prefix
-              </label>
-              <div className="input-wrapper">
-                <span>#</span>
+              <fieldset className="color-mode output-mode">
+                <legend className="field-label">Output</legend>
+                {[
+                  ["sprite", "Sprite"],
+                  ["single", "Single icon"],
+                ].map(([value, label]) => (
+                  <label
+                    className={`mode-option ${target === value ? "chosen" : ""}`}
+                    key={value}
+                  >
+                    <input
+                      type="radio"
+                      name="target"
+                      checked={target === value}
+                      onChange={() => {
+                        setTarget(value);
+                        setTab("react");
+                      }}
+                    />
+                    <b>{label}</b>
+                  </label>
+                ))}
+              </fieldset>
+              {single && (
+                <p className="field-note">
+                  Select one icon below. Export a standalone SVG or React
+                  component. No package installation needed.
+                </p>
+              )}
+              <div hidden={single}>
+                <label className="field-label" htmlFor="prefix">
+                  Symbol prefix
+                </label>
+                <div className="input-wrapper">
+                  <span>#</span>
+                  <input
+                    id="prefix"
+                    value={options.prefix}
+                    onChange={(event) => update("prefix", event.target.value)}
+                    maxLength={32}
+                    spellCheck="false"
+                  />
+                </div>
+                <p className="field-note">
+                  Names become {options.prefix || ""}sparkle
+                </p>
+                <label className="field-label" htmlFor="asset-path">
+                  Asset path
+                </label>
                 <input
-                  id="prefix"
-                  value={options.prefix}
-                  onChange={(event) => update("prefix", event.target.value)}
-                  maxLength={32}
+                  id="asset-path"
+                  value={options.publicPath}
+                  onChange={(event) => update("publicPath", event.target.value)}
+                  maxLength={120}
                   spellCheck="false"
                 />
+                <p className="field-note">
+                  Your public URL folder, e.g. /assets/
+                </p>
               </div>
-              <p className="field-note">
-                Names become {options.prefix || ""}sparkle
-              </p>
-              <label className="field-label" htmlFor="asset-path">
-                Asset path
-              </label>
-              <input
-                id="asset-path"
-                value={options.publicPath}
-                onChange={(event) => update("publicPath", event.target.value)}
-                maxLength={120}
-                spellCheck="false"
-              />
-              <p className="field-note">
-                Your public URL folder, e.g. /assets/
-              </p>
               <fieldset className="color-mode">
                 <legend className="field-label">Color handling</legend>
                 {[
@@ -385,9 +443,13 @@ function App() {
               <div className="safe-note">
                 <span>↗</span>
                 <p>
-                  Content-hashed filenames.
+                  {single
+                    ? "Standalone. Ready to paste."
+                    : "Content-hashed filenames."}
                   <br />
-                  Fresh icons after every rebuild.
+                  {single
+                    ? "React 18+ for icons with local IDs."
+                    : "Fresh icons after every rebuild."}
                 </p>
               </div>
             </aside>
@@ -527,11 +589,15 @@ function App() {
                 (build.busy
                   ? "Building your sprite…"
                   : icons.length
-                    ? `${icons.length} icons, one sprite. Looking good.`
+                    ? single
+                      ? `Selected: ${current?.name}. Standalone output ready.`
+                      : `${icons.length} icons, one sprite. Looking good.`
                     : "Ready for your first SVG.")}
             </div>
             <span>
-              {artifact ? `${(artifact.bytes / 1024).toFixed(2)} KB` : "—"}
+              {artifact
+                ? `${((single && artifact.single ? new TextEncoder().encode(artifact.single.svg).length : artifact.bytes) / 1024).toFixed(2)} KB`
+                : "—"}
               <span className="status-divider">/</span>No uploads. No account.
             </span>
           </div>
@@ -549,11 +615,7 @@ function App() {
           <div className="code-panel">
             <div className="code-toolbar">
               <div className="tabs" role="tablist" aria-label="Export code">
-                {[
-                  ["react", "React usage"],
-                  ["sprite", "SVG sprite"],
-                  ["manifest", "Manifest"],
-                ].map(([value, label]) => (
+                {tabs.map(([value, label]) => (
                   <button
                     key={value}
                     role="tab"
@@ -561,17 +623,17 @@ function App() {
                     aria-selected={tab === value}
                     tabIndex={tab === value ? 0 : -1}
                     onKeyDown={(event) => {
-                      const all = ["react", "sprite", "manifest"];
+                      const all = tabs.map(([key]) => key);
                       const index = all.indexOf(value);
                       const next =
                         event.key === "ArrowRight"
-                          ? (index + 1) % 3
+                          ? (index + 1) % all.length
                           : event.key === "ArrowLeft"
-                            ? (index + 2) % 3
+                            ? (index + all.length - 1) % all.length
                             : event.key === "Home"
                               ? 0
                               : event.key === "End"
-                                ? 2
+                                ? all.length - 1
                                 : null;
                       if (next !== null) {
                         event.preventDefault();
@@ -608,8 +670,9 @@ function App() {
             </pre>
             <div className="code-caption">
               <span className="code-dot" />
-              The actual tiny-isprite React component. The same generation
-              engine as the CLI.
+              {single
+                ? "Self-contained SVG and React. Color inherits from your page; CSS variables include fallback colors."
+                : "The actual tiny-isprite React component. The same generation engine as the CLI."}
             </div>
           </div>
           <aside className="export-panel">
@@ -620,31 +683,48 @@ function App() {
               the playground?
             </h2>
             <p>
-              Your sprite, hashed assets, source icons,
-              <br className="desktop-break" /> manifest, and React snippet. All
-              packed up.
+              {single
+                ? `Export ${current?.name || "your icon"} directly. The React component scopes local IDs to each instance.`
+                : "Your sprite, hashed assets, source icons, manifest, and React snippet. All packed up."}
             </p>
             <button
               className="button primary export-button"
-              onClick={saveBundle}
+              onClick={() =>
+                single
+                  ? download(
+                      artifact.single.component,
+                      artifact.single.componentFilename,
+                      "text/javascript",
+                    )
+                  : saveBundle()
+              }
               disabled={!ready}
             >
               <Glyph name="download" size={18} />
-              Download bundle
+              {single ? "Download React component" : "Download bundle"}
               <Glyph name="arrow" size={16} />
             </button>
             <button
               className="download-single"
               disabled={!ready}
               onClick={() =>
-                download(artifact.sprite, artifact.filename, "image/svg+xml")
+                download(
+                  single ? artifact.single.svg : artifact.sprite,
+                  single ? artifact.single.filename : artifact.filename,
+                  "image/svg+xml",
+                )
               }
             >
-              Just the SVG sprite <span>↓</span>
+              {single ? "Download standalone SVG" : "Just the SVG sprite"}{" "}
+              <span>↓</span>
             </button>
             <div className="export-file">
               <Glyph name="file" size={15} />
-              <span>{artifact?.filename || "sprite.<hash>.svg"}</span>
+              <span>
+                {single
+                  ? artifact?.single?.filename || "icon.svg"
+                  : artifact?.filename || "sprite.<hash>.svg"}
+              </span>
             </div>
           </aside>
         </section>
