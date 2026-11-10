@@ -1,3 +1,4 @@
+import { buildSpriteContent } from './sprite-content.js';
 import fs from 'fs/promises';
 import path from 'path';
 import { createHash, randomUUID } from 'node:crypto';
@@ -21,28 +22,7 @@ const versionedPath = (file, hash) => {
   return `${extension ? file.slice(0, -extension.length) : file}.${hash}${extension}`;
 };
 
-export async function processSvgWithCssVars(svgContent, iconId, variablesMap, allMode = false) {
-  let counter = { fill: 1, stroke: 1 };
-
-  const updatedSvg = svgContent.replace(/(fill|stroke)=\"(.*?)\"/gi, (match, prop, color) => {
-    if (color === 'none' || color === 'currentColor' || color.startsWith('url(')) return match;
-
-    const varName = allMode 
-      ? `--all-${iconId}-${prop}-${counter[prop]++}`
-      : `--${iconId}-${prop}-${counter[prop]++}`;
-
-    variablesMap.add(`  ${varName}: ${color};`);
-    return `${prop}="var(${varName})"`;
-  });
-
-  return updatedSvg;
-}
-
-export function generateCssFileContent(variablesMap) {
-  return `:root {\n${Array.from(variablesMap).join('\n')}\n}`;
-}
-
-
+export { processSvgWithCssVars, generateCssFileContent } from './sprite-content.js';
 
 export async function generateSprite({
   srcDir = './public/icons',
@@ -55,55 +35,14 @@ export async function generateSprite({
   publicPath = '/',
   manifestFile = outputFile.replace(/\.svg$/i, '') + '.manifest.js'
 }) {
-  async function isMulticolor(svgContent) {
-    const fills = [...svgContent.matchAll(/fill=\"(.*?)\"/gi)]
-      .map(m => m[1])
-      .filter(v => v !== 'none' && v !== 'currentColor' && !v.startsWith('url('));
-
-    return new Set(fills).size > 1;
-  }
-
-  function sanitizeSvg(svgContent) {
-    return svgContent
-      .replace(/<\?xml[^>]*>/g, '')
-      .replace(/<!DOCTYPE[^>]*>/g, '')
-      .replace(/<!--.*?-->/gs, '')
-      .replace(/<svg[^>]*>/, '')
-      .replace(/<\/svg>/, '')
-      .trim();
-  }
-
   try {
-    const files = (await fs.readdir(srcDir)).filter(f => f.endsWith('.svg')).sort();
-    // An empty source must publish an empty sprite, not leave stale symbols.
-
-    const variablesMap = new Set();
-
-    const symbols = [];
-    // Sequential processing keeps CSS variable order stable across rebuilds.
-    for (const file of files) {
-      const content = await fs.readFile(path.join(srcDir, file), 'utf8');
-      const id = path.basename(file, '.svg');
-      const hasMultipleColors = await isMulticolor(content);
-      let cleaned = sanitizeSvg(content);
-      if (forceAllVars) {
-        cleaned = await processSvgWithCssVars(cleaned, id, variablesMap, true);
-      } else if (useCssVars && !hasMultipleColors) {
-        cleaned = await processSvgWithCssVars(cleaned, id, variablesMap);
-      } else if (!hasMultipleColors && !preserveColored) {
-        cleaned = cleaned.replace(/fill=\"(?!none|currentColor|url\()[^\"]+\"/gi, 'fill="currentColor"');
-      }
-      const viewBoxMatch = content.match(/viewBox=\"([^\"]+)\"/);
-      const viewBox = viewBoxMatch && viewBoxMatch[1].trim().split(/\s+/).length === 4
-        ? `viewBox="${viewBoxMatch[1]}"` : 'viewBox="0 0 24 24"';
-      symbols.push(`<symbol id="${prefix}${id}" ${viewBox}>\n${cleaned}\n</symbol>`);
-    }
-
-    let sprite = `<svg xmlns=\"http://www.w3.org/2000/svg\" style=\"display:none\">\n${symbols.join('\n')}\n</svg>`;
-
-    if (minify) {
-      sprite = sprite.replace(/\s+/g, ' ').trim();
-    }
+    const files = (await fs.readdir(srcDir)).filter(file => file.endsWith('.svg')).sort();
+    const icons = await Promise.all(files.map(async name => ({
+      name, content: await fs.readFile(path.join(srcDir, name), 'utf8'),
+    })));
+    const { sprite, css } = await buildSpriteContent({
+      icons, preserveColored, useCssVars, forceAllVars, minify, prefix,
+    });
 
     if (/[?#]/.test(publicPath)) throw new Error('publicPath must not contain a query or fragment');
     const publicUrl = file => `${publicPath.replace(/\/$/, '')}/${encodeURIComponent(path.basename(file))}`;
@@ -113,8 +52,7 @@ export async function generateSprite({
     await writeChanged(outputFile, sprite); // Legacy alias, never cache as immutable.
 
     let cssUrl;
-    if (useCssVars || forceAllVars) {
-      const css = generateCssFileContent(variablesMap);
+    if (css !== undefined) {
       const cssPath = path.join(path.dirname(outputFile), 'icons-vars.css');
       const hashedCss = versionedPath(cssPath, hashContent(css));
       await writeChanged(hashedCss, css);

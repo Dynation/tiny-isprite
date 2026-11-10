@@ -37,6 +37,9 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: npm run test:browser
       - run: npm run test:production
+      - run: npm ci --prefix demo
+      - run: npm run test:playground
+      - run: npm audit --prefix demo
       - run: npm audit
       - uses: actions/upload-artifact@v4
         if: always()

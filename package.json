@@ -41,7 +41,10 @@
     "prepack": "npm run build",
     "test:compat": "npm run build && node test/compatibility.mjs",
     "test:production": "node test/production.mjs",
-    "check:release": "npm run typecheck && npm test && npm run test:compat && npm run test:browser && npm run test:production && npm audit"
+    "check:release": "npm run typecheck && npm test && npm run test:compat && npm run test:browser && npm run test:production && npm audit",
+    "dev:demo": "npm run dev --prefix demo",
+    "build:demo": "npm run build --prefix demo",
+    "test:playground": "npm run build:demo && npm test --prefix demo && node test/playground.mjs"
   },
   "keywords": [
     "svg",
