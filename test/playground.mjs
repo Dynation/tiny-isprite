@@ -1021,7 +1021,7 @@ try {
     .fill("25");
   await poll(() => playFill.isEnabled(), "new inlet prepared");
   await animationProgress.fill("45");
-  await page.locator(".fill-animation summary").click();
+  await page.getByText("CSS-only radial example", { exact: true }).click();
   const animationCssEvent = page.waitForEvent("download");
   await page
     .getByRole("button", { name: "Download radial animation CSS", exact: true })

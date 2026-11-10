@@ -81,6 +81,7 @@ test("animation bundle includes standalone runtime, data, artwork, React and con
     "index.html",
     "react-example.jsx",
     "README.md",
+    "AI-PROMPT.txt",
     "LICENSE.txt",
   ])
     assert.ok(zip[name], name);

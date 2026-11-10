@@ -2162,3 +2162,8 @@ html[data-page-theme="dark"]
     font-size: 21px;
   }
 }
+
+.animation-integration { margin: 16px 0; }
+.animation-integration p, .animation-integration li { font-size: 13px; line-height: 1.6; }
+.animation-integration li + li { margin-top: 8px; }
+.animation-integration textarea { display: block; box-sizing: border-box; width: 100%; margin-top: 8px; padding: 12px; font: inherit; resize: vertical; }
