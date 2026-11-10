@@ -42,13 +42,11 @@ npx build-sprite ./icons ./public/sprite.svg --manifest ./src/generated/sprite.j
 Use that URL from a component in `src/`:
 
 ```tsx
-import { Icon } from "tiny-isprite";
-import sprite from "./generated/sprite.js";
+import { Icon } from 'tiny-isprite';
+import sprite from './generated/sprite.js';
 
 export function Favorite() {
-  return (
-    <Icon name="star" spriteUrl={sprite.url} prefix={sprite.prefix} size={32} />
-  );
+  return <Icon name="star" spriteUrl={sprite.url} prefix={sprite.prefix} size={32} />;
 }
 ```
 
@@ -130,22 +128,22 @@ inconsistent with the existing Commander 13 dependency's Node 18 minimum.
 ## React API
 
 ```tsx
-import Icon, { type IconProps } from "tiny-isprite";
+import Icon, { type IconProps } from 'tiny-isprite';
 ```
 
 ```js
-const { Icon } = require("tiny-isprite");
+const { Icon } = require('tiny-isprite');
 ```
 
-| Prop        | Type               | Default   | Purpose                                                     |
-| ----------- | ------------------ | --------- | ----------------------------------------------------------- |
-| `name`      | `string`           | Required  | Symbol name without its prefix.                             |
-| `size`      | `number`           | `24`      | SVG width and height.                                       |
-| `className` | `string`           | —         | Class on the outer SVG.                                     |
-| `external`  | `boolean`          | `false`   | Use `/sprite.svg` when no `spriteUrl` is supplied.          |
-| `spriteUrl` | `string`           | —         | External sprite URL; enables external mode.                 |
-| `prefix`    | `string`           | `"icon-"` | Symbol ID prefix; use `sprite.prefix` with custom prefixes. |
-| `version`   | `string \| number` | —         | Set the `v` query parameter on an external URL.             |
+| Prop | Type | Default | Purpose |
+| --- | --- | --- | --- |
+| `name` | `string` | Required | Symbol name without its prefix. |
+| `size` | `number` | `24` | SVG width and height. |
+| `className` | `string` | — | Class on the outer SVG. |
+| `external` | `boolean` | `false` | Use `/sprite.svg` when no `spriteUrl` is supplied. |
+| `spriteUrl` | `string` | — | External sprite URL; enables external mode. |
+| `prefix` | `string` | `"icon-"` | Symbol ID prefix; use `sprite.prefix` with custom prefixes. |
+| `version` | `string \| number` | — | Set the `v` query parameter on an external URL. |
 
 The component writes both `href` and `xlinkHref` and replaces the `<use>` element
 when its full reference changes. Icons have `aria-hidden="true"`; give an icon-only
@@ -169,18 +167,18 @@ random values during render can cause SSR hydration mismatches.
 build-sprite [srcDir] [outputFile] [options]
 ```
 
-| Argument or option       | Default                     | Purpose                                                                         |
-| ------------------------ | --------------------------- | ------------------------------------------------------------------------------- |
-| `srcDir`                 | `./icons`                   | Folder of source SVG files; non-recursive.                                      |
-| `outputFile`             | `./public/sprite.svg`       | Mutable alias; hashed SVGs are written beside it.                               |
-| `-x, --prefix <prefix>`  | `icon-`                     | Prefix for every symbol ID.                                                     |
-| `--manifest <file>`      | `<output-stem>.manifest.js` | Generated ES module. Point this into application source.                        |
-| `--public-path <url>`    | `/`                         | Public URL directory for assets.                                                |
-| `-w, --watch`            | Off                         | Regenerate on source SVG changes.                                               |
-| `-p, --preserve-colored` | Off                         | Keep original monochrome fills instead of converting them to `currentColor`.    |
-| `-c, --use-css-vars`     | Off                         | Convert explicit fills/strokes to variables for icons classified as monochrome. |
-| `-a, --all`              | Off                         | Convert explicit fills/strokes to variables for all icons.                      |
-| `-m, --minify`           | Off                         | Collapse whitespace in the generated SVG.                                       |
+| Argument or option | Default | Purpose |
+| --- | --- | --- |
+| `srcDir` | `./icons` | Folder of source SVG files; non-recursive. |
+| `outputFile` | `./public/sprite.svg` | Mutable alias; hashed SVGs are written beside it. |
+| `-x, --prefix <prefix>` | `icon-` | Prefix for every symbol ID. |
+| `--manifest <file>` | `<output-stem>.manifest.js` | Generated ES module. Point this into application source. |
+| `--public-path <url>` | `/` | Public URL directory for assets. |
+| `-w, --watch` | Off | Regenerate on source SVG changes. |
+| `-p, --preserve-colored` | Off | Keep original monochrome fills instead of converting them to `currentColor`. |
+| `-c, --use-css-vars` | Off | Convert explicit fills/strokes to variables for icons classified as monochrome. |
+| `-a, --all` | Off | Convert explicit fills/strokes to variables for all icons. |
+| `-m, --minify` | Off | Collapse whitespace in the generated SVG. |
 
 Icons with multiple explicit fill colors are preserved by default. `none`,
 `currentColor` and paint-server references such as `url(...)` are left unchanged
@@ -198,9 +196,7 @@ removed icons do not remain in the current output.
 For a monochrome icon using `currentColor`, set CSS `color` on the SVG or an ancestor:
 
 ```css
-.favorite-icon {
-  color: #e11d48;
-}
+.favorite-icon { color: #e11d48; }
 ```
 
 ```tsx
@@ -225,28 +221,19 @@ npx build-sprite ./icons ./public/sprite.svg --manifest ./src/generated/sprite.j
 Load the generated stylesheet and override its actual variable names:
 
 ```tsx
-import { Icon } from "tiny-isprite";
-import sprite from "./generated/sprite.js";
+import { Icon } from 'tiny-isprite';
+import sprite from './generated/sprite.js';
 
 export function Badge() {
-  return (
-    <>
-      {sprite.cssUrl && <link rel="stylesheet" href={sprite.cssUrl} />}
-      <Icon
-        name="badge"
-        spriteUrl={sprite.url}
-        prefix={sprite.prefix}
-        className="badge"
-      />
-    </>
-  );
+  return <>
+    {sprite.cssUrl && <link rel="stylesheet" href={sprite.cssUrl} />}
+    <Icon name="badge" spriteUrl={sprite.url} prefix={sprite.prefix} className="badge" />
+  </>;
 }
 ```
 
 ```css
-.badge {
-  --badge-fill-1: #ef4444;
-}
+.badge { --badge-fill-1: #ef4444; }
 ```
 
 Variable names follow `--<name>-fill-1`, `--<name>-stroke-1`, and so on; `--all` adds
@@ -264,10 +251,10 @@ alias. A color-only edit can update the CSS URL without changing the SVG URL; lo
    references them.
 3. Retain previous hashed assets for existing tabs, older bundles and rollbacks.
 
-| Resource                                                | Suggested `Cache-Control`             |
-| ------------------------------------------------------- | ------------------------------------- |
-| Hashed SVG/CSS                                          | `public, max-age=31536000, immutable` |
-| Mutable aliases or a manifest served directly over HTTP | `no-cache`                            |
+| Resource | Suggested `Cache-Control` |
+| --- | --- |
+| Hashed SVG/CSS | `public, max-age=31536000, immutable` |
+| Mutable aliases or a manifest served directly over HTTP | `no-cache` |
 
 The generator retains old hashed files. Decide how long to keep them when deploying;
 a clean checkout alone will not contain assets from earlier releases. It does not
@@ -290,14 +277,14 @@ The generator is an ESM-only Node entry point. It returns the same metadata it
 writes to the manifest; failures reject the promise.
 
 ```js
-import { generateSprite } from "tiny-isprite/generator";
+import { generateSprite } from 'tiny-isprite/generator';
 
 const sprite = await generateSprite({
-  srcDir: "./icons",
-  outputFile: "./public/sprite.svg",
-  manifestFile: "./src/generated/sprite.js",
-  publicPath: "/",
-  prefix: "icon-",
+  srcDir: './icons',
+  outputFile: './public/sprite.svg',
+  manifestFile: './src/generated/sprite.js',
+  publicPath: '/',
+  prefix: 'icon-',
   preserveColored: false,
   useCssVars: false,
   forceAllVars: false,
@@ -372,14 +359,14 @@ npm run check:release
 
 Individual checks:
 
-| Command                   | Coverage                                                                                                                                                |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `npm run typecheck`       | Library source types.                                                                                                                                   |
-| `npm test`                | Generator, React/API, typed manifests, packed package and stale `dist` regression tests.                                                                |
-| `npm run test:compat`     | Packed package with React 17/18/19 on the current Node; ESM, CommonJS, SSR, CLI and TypeScript.                                                         |
-| `npm run test:browser`    | Vite Fast Refresh with React state retention and an immutable-cache regression.                                                                         |
+| Command | Coverage |
+| --- | --- |
+| `npm run typecheck` | Library source types. |
+| `npm test` | Generator, React/API, typed manifests, packed package and stale `dist` regression tests. |
+| `npm run test:compat` | Packed package with React 17/18/19 on the current Node; ESM, CommonJS, SSR, CLI and TypeScript. |
+| `npm run test:browser` | Vite Fast Refresh with React state retention and an immutable-cache regression. |
 | `npm run test:production` | Packed consumers, two Vite/Next.js production builds, visible SVG updates with warm cache, retained assets, Next.js SSR/hydration, and consumer audits. |
-| `npm audit`               | The repository dependency tree.                                                                                                                         |
+| `npm audit` | The repository dependency tree. |
 
 [GitHub Actions](.github/workflows/ci.yml) defines the Node 18/20/22/24 compatibility
 matrix and production browser checks. The same 12 Node/React combinations have been
@@ -400,4 +387,4 @@ See [CHANGELOG.md](CHANGELOG.md) for release details.
 
 [MIT](LICENSE.md) · [Dina / Dynation](https://github.com/Dynation)
 
-_No human neuroslop. Just tiny sprites._
+*No human neuroslop. Just tiny sprites.*
