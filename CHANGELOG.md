@@ -1,10 +1,15 @@
 # Changelog
 
-## Unreleased
+## [2.2.0] - 2026-11-10
 
 - Add a browser-only sprite playground with cleaned SVG uploads, React previews, generator settings and ZIP export.
 - Share filesystem-free generation between the CLI and playground, with byte-for-byte export parity checks.
 - Add production browser coverage for uploads, local gradients, unsafe content, drag-and-drop, duplicate names, limits and mobile layout.
+- Publish the public playground at https://dynation.github.io/tiny-isprite/ and link it from the README and package homepage.
+- Add standalone SVG/React exports, editable icon palettes and Tailwind v4 light/dark theme examples.
+- Add a separate browser icon animation builder with shape-following flow, radial reveal, per-paint timing and partial fills.
+- Export portable animation ZIPs with prepared maps, a standalone JavaScript player, React wrapper, independent examples and an integration guide with a copyable AI prompt.
+- Keep the editor and animation player outside the npm package; the existing generator and React Icon API remain compatible.
 
 ## [2.1.0] - 2026-11-09
 

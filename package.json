@@ -1,6 +1,6 @@
 {
   "name": "tiny-isprite",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "type": "module",
   "main": "./dist/Icon.cjs",
   "module": "./dist/Icon.js",
@@ -85,5 +85,5 @@
   "bugs": {
     "url": "https://github.com/Dynation/tiny-isprite/issues"
   },
-  "homepage": "https://github.com/Dynation/tiny-isprite#readme"
+  "homepage": "https://dynation.github.io/tiny-isprite/"
 }
