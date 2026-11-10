@@ -26,3 +26,7 @@ examples/*/src/generated/
 examples/*/dist/
 examples/*/.next/
 .release-artifacts/
+
+# Playground build and local Sites state
+demo/dist/
+demo/.sites-*/

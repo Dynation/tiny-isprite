@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Add a browser-only sprite playground with cleaned SVG uploads, React previews, generator settings and ZIP export.
+- Share filesystem-free generation between the CLI and playground, with byte-for-byte export parity checks.
+- Add production browser coverage for uploads, local gradients, unsafe content, drag-and-drop, duplicate names, limits and mobile layout.
+
 ## [2.1.0] - 2026-11-09
 
 - Add clean prepack builds, including regression coverage for stale and obsolete dist files.
