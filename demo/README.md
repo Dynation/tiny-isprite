@@ -193,3 +193,8 @@ layout, reduced motion, colors, partial ends, destroy/remount, React StrictMode 
 production React bundles. It blocks all outside requests. Optional local QA may
 set PLAYGROUND_EXPORT_SVG to a personal SVG; that source is not committed.
 `npm run test:playground` includes this consumer test.
+
+Animation ZIP export is available at the top of the animation pane, in the sticky
+Timeline block. The general downloads panel includes Open animation export, which
+opens the correct tab, scrolls to the selected icon and focuses Enable fill
+animation. Its caption explains the remaining enable/export steps.

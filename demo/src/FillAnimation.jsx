@@ -244,6 +244,7 @@ export function FillAnimation({
     <section className="fill-animation" aria-label="Optional fill animation">
       <label className="animation-enable">
         <input
+          id="enable-fill-animation"
           type="checkbox"
           checked={enabled}
           onChange={(event) => {
@@ -282,6 +283,14 @@ export function FillAnimation({
                 }}
               />
             </label>
+            <button
+              type="button"
+              className="button primary animation-export-action"
+              disabled={!prepared || !!error || exporting}
+              onClick={exportAnimation}
+            >
+              {exporting ? "Preparing animation ZIP…" : "Export animation ZIP"}
+            </button>
           </div>
           <div className="animation-status" role="status">
             {error ||
@@ -430,14 +439,6 @@ export function FillAnimation({
             website. No playground or animation server is needed. Regular
             SVG/React downloads remain static.
           </p>
-          <button
-            type="button"
-            className="button primary"
-            disabled={!prepared || !!error || exporting}
-            onClick={exportAnimation}
-          >
-            {exporting ? "Preparing animation ZIP…" : "Export animation ZIP"}
-          </button>
           {exportNotice && (
             <p role="status" className="animation-export-notice">
               {exportNotice}

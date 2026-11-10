@@ -356,6 +356,17 @@ function App() {
         "application/zip",
       );
   }
+  function openAnimationExport() {
+    selectInspectorTab("animation");
+    requestAnimationFrame(() => {
+      document
+        .querySelector(".icon-inspector")
+        ?.scrollIntoView({ block: "start", behavior: "smooth" });
+      document
+        .getElementById("enable-fill-animation")
+        ?.focus({ preventScroll: true });
+    });
+  }
   const inspector = current && (
     <section
       className={`icon-inspector ${single ? "single-inspector" : ""}`}
@@ -1330,6 +1341,21 @@ function App() {
                 ? `Export ${current?.name || "your icon"} directly. The React component scopes local IDs to each instance.`
                 : "Your sprite, hashed assets, source icons, manifest, and React snippet. All packed up."}
             </p>
+            <div className="animation-export-entry">
+              <button
+                type="button"
+                className="button secondary"
+                disabled={!ready}
+                onClick={openAnimationExport}
+              >
+                <Glyph name="download" size={18} />
+                Open animation export
+              </button>
+              <p>
+                For an animated ZIP: open <b>Fill animation</b>, enable it, then
+                choose <b>Export animation ZIP</b> beside the Timeline.
+              </p>
+            </div>
             <button
               className="button primary export-button"
               onClick={() =>

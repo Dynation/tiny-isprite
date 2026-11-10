@@ -100,7 +100,15 @@ try {
   await page
     .getByLabel(`Dark color ${paints[0]}`, { exact: true })
     .fill("#fb923c");
-  await page.getByRole("tab", { name: "Fill animation", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Open animation export", exact: true })
+    .click();
+  assert.equal(
+    await page
+      .getByRole("tab", { name: "Fill animation", exact: true })
+      .getAttribute("aria-selected"),
+    "true",
+  );
   await page
     .getByRole("checkbox", { name: "Enable fill animation", exact: true })
     .check();
