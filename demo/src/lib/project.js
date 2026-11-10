@@ -1,8 +1,10 @@
 import DOMPurify from "dompurify";
 import { zipSync, strToU8 } from "fflate";
+import { prepareIcons, iconVariables } from "./palette.js";
 import { buildSpriteContent } from "./sprite-content.js";
 
 export const MAX_FILE_SIZE = 128 * 1024;
+export const SINGLE_FILE_SIZE = 2 * 1024 * 1024;
 export const MAX_ICONS = 80;
 export const defaultOptions = {
   prefix: "icon-",
@@ -29,9 +31,9 @@ export function validateOptions(options) {
   return "";
 }
 
-export function cleanSvg(raw, name) {
-  if (new TextEncoder().encode(raw).length > MAX_FILE_SIZE)
-    throw new Error("SVG exceeds the 128 KB limit.");
+export function cleanSvg(raw, name, maxSize = MAX_FILE_SIZE) {
+  if (new TextEncoder().encode(raw).length > maxSize)
+    throw new Error(`SVG exceeds the ${maxSize / 1024} KB limit.`);
   const parser = new DOMParser();
   const initial = parser.parseFromString(raw, "image/svg+xml");
   if (
@@ -134,6 +136,7 @@ export function cleanSvg(raw, name) {
     parts[3] <= 0
   )
     root.setAttribute("viewBox", "0 0 24 24");
+  else root.setAttribute("viewBox", parts.join(" "));
   // Root presentation attributes would be stripped by sprite conversion. Preserve
   // their inheritance on a group before passing the source to the shared engine.
   const group = doc.createElementNS("http://www.w3.org/2000/svg", "g");
@@ -177,8 +180,9 @@ export async function contentHash(text) {
 export async function buildProject(icons, options) {
   const error = validateOptions(options);
   if (error) throw new Error(error);
+  const sources = prepareIcons(icons, options);
   const output = await buildSpriteContent({
-    icons: icons.map((icon) => ({
+    icons: sources.map((icon) => ({
       name: `${icon.name}.svg`,
       content: icon.content,
     })),
@@ -186,6 +190,7 @@ export async function buildProject(icons, options) {
     minify: options.minify,
     preserveColored: options.mode === "original",
     useCssVars: options.mode === "variables",
+    forceAllVars: options.mode === "variables" && options.allColors,
   });
   const hash = await contentHash(output.sprite);
   const filename = `sprite.${hash}.svg`;
@@ -201,6 +206,7 @@ export async function buildProject(icons, options) {
   };
   return {
     ...output,
+    sources,
     filename,
     cssFilename,
     manifest,
@@ -209,11 +215,25 @@ export async function buildProject(icons, options) {
     count: icons.length,
   };
 }
-export function reactSnippet(artifact, name, size = 24) {
+export function reactSnippet(artifact, name, size = 24, preview = {}) {
   const icon = `    <Icon\n      name=${JSON.stringify(name)}\n      spriteUrl={sprite.url}\n      prefix={sprite.prefix}\n      size={${size}}\n    />`;
-  const body = artifact.cssFilename
-    ? `    <>\n      {sprite.cssUrl && <link rel="stylesheet" href={sprite.cssUrl} />}\n${icon.replace(/^/gm, "  ")}\n    </>`
+  const vars = iconVariables(
+    artifact.css,
+    name,
+    artifact.css?.includes("--all-"),
+  );
+  const wrapperStyle = Object.fromEntries(vars.map((v) => [v.name, v.value]));
+  if (preview.color) wrapperStyle.color = preview.color;
+  if (Object.keys(wrapperStyle).length || preview.rotation)
+    wrapperStyle.display = "inline-flex";
+  if (preview.rotation)
+    wrapperStyle.transform = `rotate(${preview.rotation}deg)`;
+  const wrapped = Object.keys(wrapperStyle).length
+    ? `    <span style={${JSON.stringify(wrapperStyle)}}>\n${icon.replace(/^/gm, "  ")}\n    </span>`
     : icon;
+  const body = artifact.cssFilename
+    ? `    <>\n      {sprite.cssUrl && <link rel="stylesheet" href={sprite.cssUrl} />}\n${wrapped.replace(/^/gm, "  ")}\n    </>`
+    : wrapped;
   return `import { Icon } from 'tiny-isprite';\nimport sprite from './generated/sprite.js';\n\nexport function ExampleIcon() {\n  return (\n${body}\n  );\n}`;
 }
 export function download(data, name, type) {
@@ -242,20 +262,28 @@ export function exportBundle(artifact, icons, options, preview = {}) {
     add(`${publicDirectory}${artifact.cssFilename}`, artifact.css);
     add(`${publicDirectory}icons-vars.css`, artifact.css);
   }
-  for (const icon of icons) add(`icons/${icon.name}.svg`, icon.content);
+  for (const icon of artifact.sources || icons)
+    add(`icons/${icon.name}.svg`, icon.content);
   add(
     "Icon-example.jsx",
-    reactSnippet(artifact, preview.name || icons[0].name, preview.size || 24),
+    reactSnippet(
+      artifact,
+      preview.name || icons[0].name,
+      preview.size || 24,
+      preview,
+    ),
   );
   const mode =
     options.mode === "original"
       ? " --preserve-colored"
       : options.mode === "variables"
-        ? " --use-css-vars"
+        ? options.allColors
+          ? " --all"
+          : " --use-css-vars"
         : "";
   add(
     "README.md",
-    `# Your tiny-isprite bundle\n\nInstall: npm install tiny-isprite@^2.1.0\n\nCopy public/ and src/generated/ into your application. Use Icon-example.jsx as a component snippet.\n\nRegenerate before each application build:\n\nnpx build-sprite ./icons ./${publicDirectory}sprite.svg --manifest ./src/generated/sprite.js --public-path ${options.publicPath} --prefix "${options.prefix}"${mode}${options.minify ? " --minify" : ""}\n\nAdd --watch for development. Files in icons/ are cleaned SVG sources: scripts, animation, embedded images, style blocks and external references were removed. Root presentation attributes are preserved on a group, and internal IDs are namespaced.\n\nNew SVG bytes produce a new hashed filename. Deploy the manifest with its assets, retain older hashed assets for open tabs and use the generated URL rather than the mutable sprite.svg alias.\n\nBrowser preview: tiny-isprite 2.1.0 React Icon; generation: shared CLI engine.\n`,
+    `# Your tiny-isprite bundle\n\nInstall: npm install tiny-isprite@^2.1.0\n\nCopy public/ and src/generated/ into your application. Use Icon-example.jsx as a component snippet.\n\nRegenerate before each application build:\n\nnpx build-sprite ./icons ./${publicDirectory}sprite.svg --manifest ./src/generated/sprite.js --public-path ${options.publicPath} --prefix "${options.prefix}"${mode}${options.minify ? " --minify" : ""}\n\nAdd --watch for development. Files in icons/ are cleaned SVG sources: scripts, animation, embedded images, style blocks and external references were removed. Root presentation attributes are preserved on a group, and internal IDs are namespaced. Palette colors and stroke-width edits are baked into exported sources, so regeneration keeps your edits.\n\nNew SVG bytes produce a new hashed filename. Deploy the manifest with its assets, retain older hashed assets for open tabs and use the generated URL rather than the mutable sprite.svg alias.\n\nBrowser preview: tiny-isprite 2.1.0 React Icon; generation: shared CLI engine.\n`,
   );
   return zipSync(files, { level: 6 });
 }

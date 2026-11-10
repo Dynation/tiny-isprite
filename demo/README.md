@@ -23,14 +23,25 @@ uses the published tiny-isprite 2.1.0 React component.
 
 ## Uploads
 
-Up to 80 SVGs, 128 KB each. Scripts, embedded HTML/images, animation, style blocks
+Up to 80 SVGs. Sprite uploads allow 128 KB each; Single icon allows 2 MB each. Scripts, embedded HTML/images, animation, style blocks
 and external references are removed. Duplicate filenames get unique names. Root
 presentation attributes are preserved on a group, and local IDs are namespaced.
 The bundle contains cleaned sources, not original uploaded files.
 
 Color handling matches the CLI: default mode converts monochrome fills, original
 mode preserves fills, and CSS-variable mode converts monochrome fill/stroke values.
-Fixed strokes retain their color. Preview color affects currentColor only.
+Fixed strokes retain their color outside variable mode. In the editable palette,
+currentColor paints are materialized as #245cf3 to give them named variables;
+SVGs with implicit black fills get an explicit fill. Enable multicolor conversion
+to match the CLI's --all option. Gradient stops retain their source colors.
+
+The selected icon shows its own fill/stroke variables with color pickers and HEX
+inputs. Edits persist per icon, update the preview and generated CSS, and are baked
+into exported source SVGs so the published CLI can regenerate the chosen colors.
+CSS variables can be copied or downloaded separately. React examples put variables
+on a wrapper, compatible with the published Icon API (which accepts className,
+not style). The Tailwind tab provides equivalent arbitrary custom-property classes
+for use in a Tailwind-enabled project; the playground itself uses plain CSS.
 
 ## Hosting
 
@@ -41,11 +52,18 @@ identifies the owner-private Sites preview.
 
 Choose **Single icon**, then select an icon to download a standalone `.svg` or
 `.jsx` component. This output needs neither a sprite nor tiny-isprite installed.
-It uses the same cleanup and color conversion engine. CSS variables carry inline
-fallback colors, so no stylesheet is required. Preview color is not baked into
-exports; `currentColor` inherits from the page. The size sets the exported defaults.
+It uses the same cleanup and color conversion engine. The larger editor appears
+above the icon gallery in Single mode. Line thickness and rotation are optional
+controls; thickness affects strokes, not filled silhouettes. CSS variables carry inline
+fallback colors, so no stylesheet is required. Single SVG exports include the chosen currentColor as a color presentation
+attribute; consumers can override it with CSS or React props. The width sets the exported defaults (1–2048 px); height follows the SVG viewBox
+ratio. Comma-separated viewBoxes are normalized before sprite generation.
 
 Generated React components scope local IDs with `useId` (React 18+), preventing
 collisions when the same gradient, mask or clip-path icon is rendered twice. SVG
 files retain static local IDs; when manually pasting multiple SVGs into the same
 HTML document, namespace their IDs or use the generated React component.
+
+Optional local regression fixtures can be supplied with PLAYGROUND_LOGO (a
+multicolor, 400-unit wide logo) and PLAYGROUND_ARTWORK (the 2400×1352 monochrome
+artwork used in manual QA). Personal source files are not committed or uploaded.

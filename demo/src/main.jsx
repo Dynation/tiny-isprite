@@ -10,11 +10,13 @@ import {
   exportBundle,
   iconName,
   MAX_FILE_SIZE,
+  SINGLE_FILE_SIZE,
   MAX_ICONS,
   reactSnippet,
   validateOptions,
 } from "./lib/project.js";
 import { buildSingleIcon } from "./lib/single-icon.js";
+import { iconVariables, variableCss, colorHex } from "./lib/palette.js";
 import "./style.css";
 
 const github = "https://github.com/Dynation/tiny-isprite";
@@ -54,11 +56,17 @@ function App() {
   );
   const [target, setTarget] = useState("sprite");
   const single = target === "single";
-  const [options, setOptions] = useState(defaultOptions);
+  const [options, setOptions] = useState({
+    ...defaultOptions,
+    editablePalette: true,
+    palette: {},
+    strokeWidths: {},
+  });
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState("sparkle");
   const [color, setColor] = useState("#245cf3");
   const [size, setSize] = useState(32);
+
   const [tab, setTab] = useState("react");
   const [notice, setNotice] = useState("");
   const [reading, setReading] = useState(false);
@@ -73,16 +81,24 @@ function App() {
   const input = useRef(null);
   const copyTimer = useRef(null);
   const current = icons.find((icon) => icon.name === selected) || icons[0];
+  const rotation = options.rotations?.[current?.name] || 0;
+  const setRotation = (value) =>
+    setOptions((previous) => ({
+      ...previous,
+      rotations: { ...previous.rotations, [current?.name]: value },
+    }));
   const signature = useMemo(
     () =>
       JSON.stringify({
         icons,
         options,
         target,
-        selected: single ? current?.name : null,
-        size: single ? size : null,
+        selected: current?.name,
+        color: single ? color : null,
+        rotation,
+        size,
       }),
-    [icons, options, target, selected, size],
+    [icons, options, target, selected, size, color, rotation],
   );
   useEffect(() => {
     let disposed = false;
@@ -96,8 +112,14 @@ function App() {
           icons,
           single ? { ...options, prefix: "icon-", publicPath: "/" } : options,
         );
-        if (single && current)
-          artifact.single = await buildSingleIcon(current, options, size);
+        if (current) {
+          artifact.selected = await buildSingleIcon(
+            current,
+            { ...options, exportColor: single ? color : undefined, rotation },
+            size,
+          );
+          if (single) artifact.single = artifact.selected;
+        }
         if (disposed) return;
         url = URL.createObjectURL(
           new Blob([artifact.sprite], { type: "image/svg+xml" }),
@@ -134,26 +156,73 @@ function App() {
     artifact && current
       ? single
         ? artifact.single?.component || ""
-        : reactSnippet(artifact, current.name, size)
+        : reactSnippet(artifact, current.name, size, { color, rotation })
       : "// Add an SVG to get started.";
+  const variables = iconVariables(
+    artifact?.css,
+    current?.name,
+    options.allColors,
+  ).map((variable) => ({
+    ...variable,
+    value: options.palette[current?.name]?.[variable.name] || variable.value,
+  }));
+  const paletteCode = variableCss(variables);
+  const tailwindClasses = [
+    "inline-flex",
+    `text-[${color}]`,
+    ...(!single && rotation ? [`rotate-[${rotation}deg]`] : []),
+    ...variables.map((v) => `[${v.name}:${colorHex(v.value)}]`),
+  ].join(" ");
+  const tailwindCode = single
+    ? `// In a project with Tailwind CSS installed.\n// Import the component downloaded from this playground.\nimport { ExampleIcon } from './${current?.name || "icon"}.jsx';\n\nexport function StyledIcon() {\n  return <ExampleIcon className=${JSON.stringify(tailwindClasses)} aria-label="Your icon" />;\n}`
+    : `// In a project with Tailwind CSS installed.\nimport { Icon } from 'tiny-isprite';\nimport sprite from './generated/sprite.js';\n\nexport function StyledIcon() {\n  return (\n    <>\n      {sprite.cssUrl && <link rel="stylesheet" href={sprite.cssUrl} />}\n      <span className=${JSON.stringify(tailwindClasses)}>\n        <Icon name=${JSON.stringify(current?.name || "icon")} spriteUrl={sprite.url} prefix={sprite.prefix} size={${size}} />\n      </span>\n    </>\n  );\n}`;
   const code =
-    tab === "react"
-      ? snippet
-      : tab === "sprite"
-        ? (single ? artifact?.single?.svg : artifact?.sprite) || ""
-        : artifact?.module || "";
+    tab === "css"
+      ? paletteCode
+      : tab === "tailwind"
+        ? tailwindCode
+        : tab === "react"
+          ? snippet
+          : tab === "sprite"
+            ? (single ? artifact?.single?.svg : artifact?.sprite) || ""
+            : artifact?.module || "";
   const tabs = single
     ? [
         ["react", "React component"],
+        ["tailwind", "Tailwind"],
+        ["css", "CSS variables"],
         ["sprite", "Inline SVG"],
       ]
     : [
         ["react", "React usage"],
+        ["tailwind", "Tailwind"],
+        ["css", "CSS variables"],
         ["sprite", "SVG sprite"],
         ["manifest", "Manifest"],
       ];
   const update = (key, value) =>
     setOptions((previous) => ({ ...previous, [key]: value }));
+  function setVariable(name, value) {
+    if (!current || !/^#[\da-f]{6}$/i.test(value)) return;
+    setOptions((previous) => ({
+      ...previous,
+      palette: {
+        ...previous.palette,
+        [current.name]: { ...previous.palette[current.name], [name]: value },
+      },
+    }));
+  }
+  function resetPalette() {
+    setOptions((previous) => {
+      const palette = { ...previous.palette };
+      const strokeWidths = { ...previous.strokeWidths };
+      delete palette[current.name];
+      delete strokeWidths[current.name];
+      return { ...previous, palette, strokeWidths };
+    });
+    setRotation(0);
+  }
+  const fileLimit = single ? SINGLE_FILE_SIZE : MAX_FILE_SIZE;
   async function addFiles(files) {
     if (reading) return;
     setReading(true);
@@ -168,12 +237,13 @@ function App() {
       try {
         if (!/\.svg$/i.test(file.name))
           throw new Error("Only .svg files are supported.");
-        if (file.size > MAX_FILE_SIZE) throw new Error("SVG exceeds 128 KB.");
+        if (file.size > fileLimit)
+          throw new Error(`SVG exceeds ${single ? "2 MB" : "128 KB"}.`);
         const base = iconName(file.name);
         let name = base;
         let count = 2;
         while (names.has(name)) name = `${base}-${count++}`;
-        const content = cleanSvg(await file.text(), name);
+        const content = cleanSvg(await file.text(), name, fileLimit);
         additions.push({ name, content, original: file.name });
         names.add(name);
       } catch (error) {
@@ -216,11 +286,175 @@ function App() {
   function saveBundle() {
     if (ready)
       download(
-        exportBundle(artifact, icons, options, { name: current.name, size }),
+        exportBundle(artifact, icons, options, {
+          name: current.name,
+          size,
+          color,
+          rotation,
+        }),
         "tiny-isprite-bundle.zip",
         "application/zip",
       );
   }
+  const inspector = current && (
+    <section
+      className={`icon-inspector ${single ? "single-inspector" : ""}`}
+      aria-label="Selected icon editor"
+    >
+      <div className="inspector-heading">
+        <div>
+          <span className="section-label">SELECTED ICON</span>
+          <h3>{current.name}</h3>
+        </div>
+        <button className="inspector-reset" onClick={resetPalette}>
+          Reset icon
+        </button>
+      </div>
+      <div className="inspector-body">
+        <div
+          className="selected-preview"
+          style={{ color }}
+          aria-label={`Live preview of ${current.name}`}
+        >
+          {artifact?.selected && (
+            <div
+              className="selected-artwork"
+              dangerouslySetInnerHTML={{ __html: artifact.selected.svg }}
+            />
+          )}
+          <small>
+            {size} × {artifact?.selected?.height || size} px export · preview
+            fits this canvas
+          </small>
+        </div>
+        <div className="palette-editor">
+          <h4>Colors you can change</h4>
+          {options.mode !== "variables" ? (
+            <>
+              <p>
+                Create named CSS variables for this icon, then try each color.
+              </p>
+              <button
+                className="button secondary"
+                onClick={() =>
+                  setOptions((previous) => ({
+                    ...previous,
+                    mode: "variables",
+                    allColors: true,
+                  }))
+                }
+              >
+                Generate editable variables
+              </button>
+            </>
+          ) : variables.length ? (
+            <>
+              <p>Pick a color. Preview and downloads update together.</p>
+              {variables.map((variable) => (
+                <div className="variable-row" key={variable.name}>
+                  <label className="variable-picker">
+                    <input
+                      type="color"
+                      aria-label={`Color ${variable.name}`}
+                      value={colorHex(variable.value)}
+                      onChange={(event) =>
+                        setVariable(variable.name, event.target.value)
+                      }
+                    />
+                    <span>
+                      <b>{variable.property}</b>
+                      <code>{variable.name}</code>
+                    </span>
+                  </label>
+                  <input
+                    className="variable-value"
+                    aria-label={`Value ${variable.name}`}
+                    key={`${variable.name}-${variable.value}`}
+                    defaultValue={colorHex(variable.value)}
+                    maxLength={7}
+                    pattern="#[0-9a-fA-F]{6}"
+                    onBlur={(event) => {
+                      const value = event.target.value;
+                      if (/^#[\da-f]{6}$/i.test(value))
+                        setVariable(variable.name, value);
+                      else event.target.value = colorHex(variable.value);
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") event.currentTarget.blur();
+                    }}
+                    onFocus={(event) => event.target.select()}
+                  />
+                </div>
+              ))}
+              <button
+                className="palette-copy"
+                disabled={!ready}
+                onClick={() => copy(paletteCode, "palette")}
+              >
+                {copied === "palette"
+                  ? "Copied CSS"
+                  : "Copy this icon’s CSS variables"}
+              </button>
+            </>
+          ) : (
+            <>
+              <p>
+                No fill/stroke variables were generated. Gradient stops and
+                embedded paint servers keep their source colors.
+              </p>
+              {!options.allColors && (
+                <button
+                  className="button secondary"
+                  onClick={() => update("allColors", true)}
+                >
+                  Generate multicolor palette
+                </button>
+              )}
+            </>
+          )}
+          <label className="inspector-control">
+            Line thickness{" "}
+            <input
+              aria-label="Line thickness"
+              type="range"
+              min="0"
+              max="8"
+              step="0.1"
+              value={options.strokeWidths[current.name] ?? 1.7}
+              onChange={(event) =>
+                setOptions((previous) => ({
+                  ...previous,
+                  strokeWidths: {
+                    ...previous.strokeWidths,
+                    [current.name]: Number(event.target.value),
+                  },
+                }))
+              }
+            />
+            <output>{options.strokeWidths[current.name] ?? "Original"}</output>
+          </label>
+          <label className="inspector-control">
+            Rotation{" "}
+            <input
+              aria-label="Rotation"
+              type="range"
+              min="-180"
+              max="180"
+              step="15"
+              value={rotation}
+              onChange={(event) => setRotation(Number(event.target.value))}
+            />
+            <output>{rotation}°</output>
+          </label>
+          <p className="field-note">
+            Line thickness affects SVG strokes. Filled silhouettes do not have
+            an outline to thicken. Copy ready-to-use React, CSS or Tailwind
+            examples below.
+          </p>
+        </div>
+      </div>
+    </section>
+  );
   return (
     <div className="app-shell">
       <header className="header">
@@ -347,6 +581,8 @@ function App() {
                       checked={target === value}
                       onChange={() => {
                         setTarget(value);
+                        if (value === "sprite")
+                          setSize((previous) => Math.min(previous, 64));
                         setTab("react");
                       }}
                     />
@@ -428,6 +664,18 @@ function App() {
                   </label>
                 ))}
               </fieldset>
+              {options.mode === "variables" && (
+                <label className="palette-all">
+                  <input
+                    type="checkbox"
+                    checked={!!options.allColors}
+                    onChange={(event) =>
+                      update("allColors", event.target.checked)
+                    }
+                  />
+                  Include multicolor fills and strokes
+                </label>
+              )}
               <label className="toggle-row">
                 <span>
                   <b>Minify output</b>
@@ -469,8 +717,9 @@ function App() {
                   />
                 </label>
               </div>
+              {single && inspector}
               <div
-                className={`icon-canvas ${dragging ? "dragging" : ""}`}
+                className={`icon-canvas ${single ? "single-gallery" : ""} ${dragging ? "dragging" : ""}`}
                 style={{ "--preview-color": color }}
                 onDragOver={(event) => {
                   event.preventDefault();
@@ -509,7 +758,7 @@ function App() {
                             name={icon.name}
                             spriteUrl={build.url}
                             prefix={artifact.manifest.prefix}
-                            size={size}
+                            size={single ? Math.min(size, 48) : size}
                           />
                         )}
                         <span>{icon.name}</span>
@@ -547,9 +796,12 @@ function App() {
                 >
                   <Glyph name="upload" size={15} />
                   Drop SVGs here, or <b>browse files</b>
-                  <span>Up to {MAX_ICONS} icons · 128 KB each</span>
+                  <span>
+                    Up to {MAX_ICONS} SVGs · {single ? "2 MB" : "128 KB"} each
+                  </span>
                 </button>
               </div>
+              {!single && inspector}
               <div className="preview-controls">
                 <label className="color-control">
                   Preview color{" "}
@@ -569,16 +821,38 @@ function App() {
                     id="preview-size"
                     type="range"
                     min="20"
-                    max="64"
+                    max={single ? "2048" : "64"}
                     value={size}
                     onChange={(event) => setSize(Number(event.target.value))}
                   />
-                  <code>{size}px</code>
+                  {single ? (
+                    <input
+                      className="size-number"
+                      type="number"
+                      aria-label="Export size in pixels"
+                      min="1"
+                      max="2048"
+                      value={size}
+                      onChange={(event) => {
+                        const value = Number(event.target.value);
+                        if (
+                          Number.isInteger(value) &&
+                          value >= 1 &&
+                          value <= 2048
+                        )
+                          setSize(value);
+                      }}
+                    />
+                  ) : (
+                    <code>{size}px</code>
+                  )}
                 </label>
               </div>
               <div className="preview-footnote">
-                Preview color applies to <code>currentColor</code>. Fixed fills,
-                strokes and CSS-variable defaults keep their colors.
+                Preview color changes <code>currentColor</code>; palette pickers
+                change named variables. Single SVG downloads include your chosen
+                currentColor. Fixed fills and gradient stops retain their source
+                colors.
               </div>
             </div>
           </div>
@@ -718,6 +992,23 @@ function App() {
               {single ? "Download standalone SVG" : "Just the SVG sprite"}{" "}
               <span>↓</span>
             </button>
+            {options.mode === "variables" && (
+              <button
+                className="download-single"
+                disabled={!ready || !variables.length}
+                onClick={() =>
+                  download(
+                    single ? paletteCode : artifact.css,
+                    single
+                      ? `${current.name}-variables.css`
+                      : artifact.cssFilename,
+                    "text/css",
+                  )
+                }
+              >
+                Download CSS variables <span aria-hidden="true">↓</span>
+              </button>
+            )}
             <div className="export-file">
               <Glyph name="file" size={15} />
               <span>

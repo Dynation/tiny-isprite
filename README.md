@@ -304,7 +304,11 @@ The `demo/` app is a browser-only sprite builder: upload SVG files, adjust prefi
 color handling and asset paths, preview the actual React component, and download
 hashed assets with a typed manifest and React example as a ZIP. Choose **Single icon**
 to export the selected icon as a standalone SVG or React component without a
-sprite or package dependency. React components with local IDs require React 18+.
+sprite or package dependency. React components with local IDs require React 18+. The selected icon has an editable
+CSS-variable palette, individual color pickers, copy/download CSS and React/Tailwind
+examples. Palette edits are baked into exported sources for reproducible CLI builds.
+Single mode supports SVGs up to 2 MB and exports up to 2048 px wide with the source
+aspect ratio.
 
 ```bash
 npm ci

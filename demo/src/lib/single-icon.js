@@ -1,13 +1,20 @@
+import { prepareIcons } from "./palette.js";
 import { buildSpriteContent } from "./sprite-content.js";
 
 // Input has already passed through the playground's SVG sanitizer.
 export async function buildSingleIcon(icon, options, size = 24) {
   const output = await buildSpriteContent({
-    icons: [{ name: `${icon.name}.svg`, content: icon.content }],
+    icons: [
+      {
+        name: `${icon.name}.svg`,
+        content: prepareIcons([icon], options)[0].content,
+      },
+    ],
     prefix: "icon-",
     minify: options.minify,
     preserveColored: options.mode === "original",
     useCssVars: options.mode === "variables",
+    forceAllVars: options.mode === "variables" && options.allColors,
   });
   const doc = new DOMParser().parseFromString(output.sprite, "image/svg+xml");
   const symbol = doc.querySelector("symbol");
@@ -15,7 +22,20 @@ export async function buildSingleIcon(icon, options, size = 24) {
   root.setAttribute("xmlns", "http://www.w3.org/2000/svg");
   root.setAttribute("viewBox", symbol.getAttribute("viewBox"));
   root.setAttribute("width", String(size));
-  root.setAttribute("height", String(size));
+  const viewBox = root.getAttribute("viewBox").split(/\s+/).map(Number);
+  const height = Number(((size * viewBox[3]) / viewBox[2]).toFixed(3));
+  root.setAttribute("height", String(height));
+  if (options.exportColor) root.setAttribute("color", options.exportColor);
+  if (options.rotation) {
+    const [x, y, w, h] = root.getAttribute("viewBox").split(/\s+/).map(Number);
+    const group = doc.createElementNS("http://www.w3.org/2000/svg", "g");
+    group.setAttribute(
+      "transform",
+      `rotate(${options.rotation} ${x + w / 2} ${y + h / 2})`,
+    );
+    while (symbol.firstChild) group.appendChild(symbol.firstChild);
+    symbol.appendChild(group);
+  }
   while (symbol.firstChild) root.appendChild(symbol.firstChild);
   const defaults = new Map(
     [...(output.css || "").matchAll(/(--[\w-]+)\s*:\s*([^;{}]+);/g)].map(
@@ -75,6 +95,7 @@ export async function buildSingleIcon(icon, options, size = 24) {
   }
   const component = `${ids.length ? '"use client";\n\nimport { useId } from "react";\n\n' : ""}export function ExampleIcon(props) {\n${ids.length ? "  const iconId = useId();\n" : ""}  return (\n${jsx(root)}\n  );\n}\n`;
   return {
+    height,
     svg: new XMLSerializer().serializeToString(root),
     component,
     filename: `${icon.name}.svg`,

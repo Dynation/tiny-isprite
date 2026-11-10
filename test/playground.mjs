@@ -362,6 +362,241 @@ try {
   );
   await page.getByLabel("Asset path", { exact: true }).fill("/");
   await ready();
+  // Beginners can change each generated variable and take the same colors away.
+  await page
+    .locator(".icon-select")
+    .filter({ hasText: /^heart$/ })
+    .click();
+  await page.getByRole("radio", { name: /Generate CSS variables/ }).check();
+  await ready();
+  const heartPicker = page.getByLabel("Color --heart-stroke-1", {
+    exact: true,
+  });
+  await heartPicker.fill("#13c38b");
+  await ready();
+  assert.equal(
+    await page
+      .locator(".selected-preview g[stroke]")
+      .first()
+      .evaluate((el) => getComputedStyle(el).stroke),
+    "rgb(19, 195, 139)",
+  );
+  await page.getByRole("tab", { name: "CSS variables", exact: true }).click();
+  assert.match(
+    await page.locator("#code-output").textContent(),
+    /--heart-stroke-1: #13c38b/,
+  );
+  assert.doesNotMatch(
+    await page.locator("#code-output").textContent(),
+    /sparkle/,
+  );
+  await page
+    .locator(".icon-select")
+    .filter({ hasText: /^sparkle$/ })
+    .click();
+  await ready();
+  assert.equal(
+    await page
+      .getByLabel("Color --sparkle-stroke-1", { exact: true })
+      .inputValue(),
+    "#245cf3",
+  );
+  await page
+    .locator(".icon-select")
+    .filter({ hasText: /^heart$/ })
+    .click();
+  await ready();
+  assert.equal(await heartPicker.inputValue(), "#13c38b");
+  const hex = page.getByLabel("Value --heart-stroke-1", { exact: true });
+  await hex.fill("#3b82f6");
+  await hex.press("Enter");
+  await ready();
+  assert.equal(await heartPicker.inputValue(), "#3b82f6");
+  await page.getByRole("tab", { name: "React usage", exact: true }).click();
+  const paletteSnippet = await page.locator("#code-output").textContent();
+  assert.match(paletteSnippet, /<span style=\{\{/);
+  assert.match(paletteSnippet, /"--heart-stroke-1":"#3b82f6"/);
+  assert.doesNotMatch(paletteSnippet, /<Icon\s+style=/);
+  await page.getByRole("tab", { name: "Tailwind", exact: true }).click();
+  assert.match(
+    await page.locator("#code-output").textContent(),
+    /\[--heart-stroke-1:#3b82f6\]/,
+  );
+  const cssEvent = page.waitForEvent("download");
+  await page.getByRole("button", { name: /Download CSS variables/ }).click();
+  const cssDownload = await cssEvent;
+  await cssDownload.saveAs(path.join(artifacts, "edited-variables.css"));
+  assert.match(
+    await readFile(path.join(artifacts, "edited-variables.css"), "utf8"),
+    /--heart-stroke-1: #3b82f6/,
+  );
+  await page.screenshot({
+    path: path.join(artifacts, "palette-editor.png"),
+    fullPage: true,
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  assert.equal(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth > innerWidth,
+    ),
+    false,
+  );
+  await page.screenshot({
+    path: path.join(artifacts, "palette-mobile.png"),
+    fullPage: true,
+  });
+  await page.setViewportSize({ width: 1440, height: 1080 });
+  console.log(
+    "PASS per-icon color pickers, HEX editing, live colors, scoped CSS, published Icon-compatible React/Tailwind and CSS download",
+  );
+
+  await page.getByRole("radio", { name: "Single icon", exact: true }).check();
+  await singleReady();
+  const logoInput = process.env.PLAYGROUND_LOGO || null;
+  await page.getByLabel("Upload SVG files", { exact: true }).setInputFiles(
+    logoInput || {
+      name: "wide-logo.svg",
+      mimeType: "image/svg+xml",
+      buffer: Buffer.from(
+        '<svg viewBox="0, 0, 400,120"><path fill="#ff0000" d="M0 0h200v120H0z"/><path fill="#00ff00" d="M200 0h200v120H200z"/></svg>',
+      ),
+    },
+  );
+  await poll(
+    async () =>
+      (await page
+        .locator(".icon-card.selected .icon-select > span")
+        .textContent()) !== "heart",
+    "logo upload selected",
+  );
+  await singleReady();
+  await page.getByRole("checkbox", { name: /Include multicolor/ }).check();
+  await singleReady();
+  assert.ok((await page.locator(".variable-row").count()) >= 2);
+  const logoName = await page
+    .locator(".icon-card.selected .icon-select > span")
+    .textContent();
+  const logoColor = page.locator(".variable-picker input").first();
+  await logoColor.fill("#8b5cf6");
+  await singleReady();
+  await page.getByLabel("Export size in pixels", { exact: true }).fill("512");
+  await singleReady();
+  await page.getByRole("tab", { name: "Inline SVG", exact: true }).click();
+  const logoOutput = await page.locator("#code-output").textContent();
+  assert.match(logoOutput, /width="512"/);
+  assert.equal(
+    await page
+      .locator(".icon-card svg")
+      .evaluateAll((elements) =>
+        elements.every((el) => Number(el.getAttribute("width")) <= 64),
+      ),
+    true,
+  );
+  assert.match(logoOutput, /viewBox="0 0 400 (119\.35483870967742|120)"/);
+  assert.match(logoOutput, /#8b5cf6/);
+  assert.match(logoOutput, /height="15[23]\.\d+"/);
+  await page.getByRole("tab", { name: "React component", exact: true }).click();
+  const logoComponent = await page.locator("#code-output").textContent();
+  const compiledLogo = transformSync(logoComponent, {
+    loader: "jsx",
+    jsx: "automatic",
+    format: "cjs",
+  }).code;
+  const logoModule = { exports: {} };
+  new Function("module", "exports", "require", compiledLogo)(
+    logoModule,
+    logoModule.exports,
+    createRequire(import.meta.url),
+  );
+  assert.match(
+    renderToStaticMarkup(React.createElement(logoModule.exports.ExampleIcon)),
+    /#8b5cf6/,
+  );
+  await page.screenshot({
+    path: path.join(artifacts, "logo-editor.png"),
+    fullPage: true,
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  assert.equal(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth > innerWidth,
+    ),
+    false,
+  );
+  await page.setViewportSize({ width: 1440, height: 1080 });
+  // Single mode accepts larger documents, while the sprite importer retains its cap.
+  const largeSvg =
+    '<svg viewBox="0 0 400 120">' +
+    " ".repeat(160 * 1024) +
+    '<rect width="400" height="120" fill="#123456"/></svg>';
+  await page.getByLabel("Upload SVG files", { exact: true }).setInputFiles({
+    name: "large-logo.svg",
+    mimeType: "image/svg+xml",
+    buffer: Buffer.from(largeSvg),
+  });
+  await singleReady();
+  await poll(
+    async () =>
+      (await page
+        .locator(".icon-card.selected .icon-select > span")
+        .textContent()) === "large-logo",
+    "larger single upload",
+  );
+  if (process.env.PLAYGROUND_ARTWORK) {
+    await page
+      .getByLabel("Upload SVG files", { exact: true })
+      .setInputFiles(process.env.PLAYGROUND_ARTWORK);
+    await poll(
+      async () =>
+        (await page
+          .locator(".icon-card.selected .icon-select > span")
+          .textContent()) !== "large-logo",
+      "large real artwork selected",
+    );
+    await singleReady();
+    assert.equal(await page.locator(".variable-row").count(), 1);
+    await page.locator(".variable-picker input").first().fill("#f97316");
+    await singleReady();
+    assert.equal(
+      await page
+        .locator(".selected-preview path")
+        .first()
+        .evaluate((el) => getComputedStyle(el).fill),
+      "rgb(249, 115, 22)",
+    );
+    await page.getByRole("tab", { name: "Inline SVG", exact: true }).click();
+    const artwork = await page.locator("#code-output").textContent();
+    assert.match(artwork, /viewBox="0 0 2400 1352"/);
+    assert.match(artwork, /#f97316/);
+    assert.match(artwork, /translate\(0/);
+    assert.ok((await page.locator(".selected-preview path").count()) > 10);
+    await page.screenshot({
+      path: path.join(artifacts, "real-artwork-editor.png"),
+      fullPage: true,
+    });
+    console.log(
+      "PASS actual 157KB user artwork: one shared fill variable changes every contour, transforms and viewBox retained",
+    );
+  }
+  await page.getByRole("radio", { name: "Sprite", exact: true }).check();
+  await ready();
+  assert.equal(
+    await page.getByRole("slider", { name: /^Size/ }).inputValue(),
+    "64",
+  );
+  await page.getByLabel("Upload SVG files", { exact: true }).setInputFiles({
+    name: "too-large-for-sprite.svg",
+    mimeType: "image/svg+xml",
+    buffer: Buffer.from(largeSvg),
+  });
+  await poll(
+    async () =>
+      (await page.locator(".notice").textContent()).includes("exceeds 128 KB"),
+    "sprite cap preserved",
+  );
+  console.log(
+    `PASS multicolor logo ${logoName}, comma-separated viewBox, 512px export with aspect ratio, React compilation and larger single uploads`,
+  );
   const currentNames = await page
     .locator(".remove-icon")
     .evaluateAll((elements) =>
