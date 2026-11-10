@@ -154,3 +154,38 @@ test("single usage explains import, real variable overrides and proportional res
   );
   assert.doesNotMatch(plain, /iconColors|style=\{/);
 });
+
+test("theme files connect per-icon variables to global semantic tokens without inline overrides", async () => {
+  const { buildThemeExample } = await import("../src/lib/theme.js");
+  const artifact = await buildProject(icons, {
+    ...defaultOptions,
+    mode: "variables",
+  });
+  const theme = buildThemeExample({
+    name: "badge",
+    variables: [{ name: "--badge-fill-1", value: "#123456" }],
+    color: "#245cf3",
+    darkPalette: { "--badge-fill-1": "#f97316" },
+    single: false,
+    size: 32,
+  });
+  assert.match(theme.css, /@theme static \{/);
+  assert.match(theme.css, /--color-icon-badge-fill-1: #123456/);
+  assert.match(theme.css, /\.dark \{[\s\S]*--color-icon-badge-fill-1: #f97316/);
+  assert.match(
+    theme.jsx,
+    /\[--badge-fill-1:var\(--color-icon-badge-fill-1\)\]/,
+  );
+  assert.doesNotMatch(theme.jsx, /style=/);
+  assert.match(theme.jsx, /setDark\(value => !value\)/);
+  const zip = unzipSync(
+    exportBundle(
+      artifact,
+      icons,
+      { ...defaultOptions, mode: "variables" },
+      { theme },
+    ),
+  );
+  assert.equal(strFromU8(zip["src/globals.css"]), theme.css);
+  assert.equal(strFromU8(zip["src/Theme-example.jsx"]), theme.jsx);
+});

@@ -40,8 +40,9 @@ inputs. Edits persist per icon, update the preview and generated CSS, and are ba
 into exported source SVGs so the published CLI can regenerate the chosen colors.
 CSS variables can be copied or downloaded separately. React examples put variables
 on a wrapper, compatible with the published Icon API (which accepts className,
-not style). The Tailwind tab provides equivalent arbitrary custom-property classes
-for use in a Tailwind-enabled project; the playground itself uses plain CSS.
+not style). The Tailwind tab provides a working theme-switch component with semantic-token
+classes for a Tailwind v4 project; globals.css / @theme supplies its stylesheet.
+The playground itself uses plain CSS.
 
 ## Hosting
 
@@ -87,3 +88,30 @@ inline variable overrides so the class can apply.
 The browser regression compiles the actual generated usage file, resolves its
 component import, replaces a color value and verifies the rendered SVG's computed
 fill changes to that value.
+
+## Tailwind v4 themes
+
+Each selected icon has independent light and dark color values. The Light/Dark
+preview switch changes inherited custom properties without replacing the SVG.
+The preview uses plain CSS; regressions compile the actual generated global CSS
+with Tailwind 4.3.0 and verify both the published sprite Icon and standalone
+component inherit the correct light/dark paints. Tailwind is a development-only
+test dependency and is not included in the browser bundle.
+
+Download or copy globals.css / @theme and the Tailwind theme example. Merge
+@import "tailwindcss", @custom-variant dark and @theme static into the consuming
+app's global stylesheet. The generated --color-icon-\* tokens hold light colors;
+.dark overrides the same tokens. static emits tokens even if the only consumer
+is an SVG custom-property binding. The component's literal Tailwind classes map
+its generated paint variables to these tokens. Do not add inline palette styles,
+which would override the theme.
+
+The example includes a local .dark ancestor toggle and dark: surface/text classes.
+An existing app-wide theme toggle can replace it. The generated CSS targets v4;
+@theme is not supported in v3. Sprite ZIPs include src/globals.css and
+src/Theme-example.jsx for the selected icon. Single mode provides separate CSS and
+example downloads beside the generated component. SVG and basic React downloads
+retain light palette defaults; theme files contain both palettes.
+
+Official references: https://tailwindcss.com/docs/theme and
+https://tailwindcss.com/docs/dark-mode .

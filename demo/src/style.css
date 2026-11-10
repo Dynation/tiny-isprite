@@ -1571,3 +1571,62 @@ footer > a:last-child span {
     padding: 20px 16px;
   }
 }
+.theme-toggle {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 12px 0;
+}
+.theme-toggle button {
+  border: 1px solid #dbe3d1;
+  background: #fff;
+  border-radius: 6px;
+  padding: 7px 10px;
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+.theme-toggle button[aria-pressed="true"] {
+  background: #245cf3;
+  border-color: #245cf3;
+  color: white;
+}
+.variable-row {
+  flex-wrap: wrap;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e1e5db;
+}
+.dark-variable-row {
+  display: flex;
+  width: 100%;
+  gap: 8px;
+  align-items: center;
+  padding-top: 8px;
+}
+.theme-foreground {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 11px;
+  margin-top: 14px;
+}
+.theme-foreground input {
+  width: 36px;
+  height: 30px;
+  border: 1px solid #e1e5db;
+  background: white;
+}
+.theme-preview.dark {
+  background-color: #0f172a;
+  background-image: radial-gradient(#334155 1px, transparent 1px);
+  border-color: #334155;
+}
+.theme-preview.dark small {
+  color: #cbd5e1;
+}
+.theme-preview .selected-artwork > svg {
+  color: inherit;
+}
+.theme-guide a {
+  color: #245cf3;
+}

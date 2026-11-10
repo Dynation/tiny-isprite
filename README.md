@@ -307,6 +307,9 @@ to export the selected icon as a standalone SVG or React component without a
 sprite or package dependency. React components with local IDs require React 18+. The selected icon has an editable
 CSS-variable palette, individual color pickers, copy/download CSS and React/Tailwind
 examples. Palette edits are baked into exported sources for reproducible CLI builds.
+The Tailwind v4 example includes global @theme tokens, separate light/dark palettes
+and a working theme toggle. Generated globals.css and component examples can be
+downloaded; Sprite ZIPs include these theme files.
 Single mode supports SVGs up to 2 MB and exports up to 2048 px wide with the source
 aspect ratio.
 

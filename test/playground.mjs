@@ -1,6 +1,7 @@
 import { transformSync } from "esbuild";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { compile as compileTailwind } from "../demo/node_modules/@tailwindcss/node/dist/index.mjs";
 import assert from "node:assert/strict";
 import { chromium } from "@playwright/test";
 import { mkdtemp, mkdir, writeFile, readFile, rm } from "node:fs/promises";
@@ -54,10 +55,11 @@ try {
     }, "playground preview");
   }
   browser = await chromium.launch({ headless: true });
-  const page = await browser.newPage({
+  const context = await browser.newContext({
     viewport: { width: 1440, height: 1080 },
     acceptDownloads: true,
   });
+  const page = await context.newPage();
   const errors = [],
     requests = [],
     dialogs = [];
@@ -421,7 +423,143 @@ try {
   await page.getByRole("tab", { name: "Tailwind", exact: true }).click();
   assert.match(
     await page.locator("#code-output").textContent(),
-    /\[--heart-stroke-1:#3b82f6\]/,
+    /\[--heart-stroke-1:var\(--color-icon-heart-stroke-1\)\]/,
+  );
+  await page
+    .getByLabel("Dark color --heart-stroke-1", { exact: true })
+    .fill("#f97316");
+  assert.equal(
+    await page
+      .locator(".selected-preview g[stroke]")
+      .first()
+      .evaluate((el) => getComputedStyle(el).stroke),
+    "rgb(249, 115, 22)",
+  );
+  await page
+    .locator(".selected-artwork > svg")
+    .evaluate((el) => el.setAttribute("data-theme-identity", "same-svg"));
+  await page
+    .getByRole("button", { name: "Light preview", exact: true })
+    .click();
+  assert.equal(
+    await page
+      .locator(".selected-preview g[stroke]")
+      .first()
+      .evaluate((el) => getComputedStyle(el).stroke),
+    "rgb(59, 130, 246)",
+  );
+  await page.getByRole("button", { name: "Dark preview", exact: true }).click();
+  assert.equal(
+    await page
+      .locator(".selected-artwork > svg")
+      .getAttribute("data-theme-identity"),
+    "same-svg",
+  );
+  await page
+    .getByRole("tab", { name: "globals.css / @theme", exact: true })
+    .click();
+  const spriteThemeCss = await page.locator("#code-output").textContent();
+  assert.match(spriteThemeCss, /@theme static/);
+  assert.match(spriteThemeCss, /--color-icon-heart-stroke-1: #3b82f6/);
+  assert.match(spriteThemeCss, /--color-icon-heart-stroke-1: #f97316/);
+  assert.match(spriteThemeCss, /@custom-variant dark/);
+  await page.getByRole("tab", { name: "Tailwind", exact: true }).click();
+  const spriteThemeJsx = await page.locator("#code-output").textContent();
+  // Compile the exact globals.css and render the actual published sprite Icon.
+  const spriteThemeCompiler = await compileTailwind(spriteThemeCss, {
+    base: path.join(repo, "demo"),
+    onDependency() {},
+  });
+  const spriteCandidates = [
+    ...spriteThemeJsx.matchAll(/className="([^"]+)"/g),
+  ].flatMap((m) => m[1].split(/\s+/));
+  const spriteCompiledCss = spriteThemeCompiler.build(spriteCandidates);
+  const { Icon: PublishedIcon } = createRequire(
+    new URL("../demo/package.json", import.meta.url),
+  )("tiny-isprite");
+  const heartHref = await page
+    .locator(".icon-card")
+    .filter({
+      has: page.locator(".icon-select > span", { hasText: /^heart$/ }),
+    })
+    .locator("use")
+    .getAttribute("href");
+  const [spriteUrl, spriteSymbol] = heartHref.split("#");
+  const themeSource = transformSync(spriteThemeJsx, {
+    loader: "jsx",
+    jsx: "automatic",
+    format: "cjs",
+  }).code;
+  const themeModule = { exports: {} };
+  const themeRequire = (specifier) =>
+    specifier === "./globals.css"
+      ? {}
+      : specifier === "tiny-isprite"
+        ? { Icon: PublishedIcon }
+        : specifier === "./generated/sprite.js"
+          ? {
+              default: {
+                url: spriteUrl,
+                prefix: spriteSymbol.slice(0, -"heart".length),
+              },
+              __esModule: true,
+            }
+          : createRequire(import.meta.url)(specifier);
+  new Function("module", "exports", "require", themeSource)(
+    themeModule,
+    themeModule.exports,
+    themeRequire,
+  );
+  const themeMarkup = renderToStaticMarkup(
+    React.createElement(themeModule.exports.default),
+  );
+  const themePage = await page.context().newPage();
+  await themePage.goto(url);
+  await themePage.setContent(
+    `<style>${spriteCompiledCss}</style><div id="theme-test">${themeMarkup}</div>`,
+  );
+  const mappedSvg = themePage.locator("#theme-test svg");
+  await themePage.waitForFunction(
+    () => document.querySelector("#theme-test use").getBBox().width > 0,
+  );
+  assert.equal(
+    await mappedSvg.evaluate((el) =>
+      getComputedStyle(el).getPropertyValue("--heart-stroke-1").trim(),
+    ),
+    "#3b82f6",
+  );
+  const lightButtonColor = await themePage
+    .locator("#theme-test button")
+    .evaluate((el) => getComputedStyle(el).color);
+  await themePage
+    .locator("#theme-test > section")
+    .evaluate((el) => el.classList.add("dark"));
+  assert.equal(
+    await mappedSvg.evaluate((el) =>
+      getComputedStyle(el).getPropertyValue("--heart-stroke-1").trim(),
+    ),
+    "#f97316",
+  );
+  assert.notEqual(
+    await themePage
+      .locator("#theme-test button")
+      .evaluate((el) => getComputedStyle(el).color),
+    lightButtonColor,
+  );
+  await themePage.close();
+  const themeCssEvent = page.waitForEvent("download");
+  await page.getByRole("button", { name: /Download globals.css/ }).click();
+  const themeCssDownload = await themeCssEvent;
+  await themeCssDownload.saveAs(path.join(artifacts, "globals.css"));
+  assert.equal(
+    await readFile(path.join(artifacts, "globals.css"), "utf8"),
+    spriteThemeCss,
+  );
+  await page
+    .getByRole("button", { name: "Light preview", exact: true })
+    .click();
+  console.log(
+    "PASS actual Tailwind v4 compilation of @theme globals.css, dark variants, semantic tokens and published sprite Icon variable inheritance",
   );
   const cssEvent = page.waitForEvent("download");
   await page.getByRole("button", { name: /Download CSS variables/ }).click();
@@ -562,6 +700,66 @@ try {
   );
   console.log(
     "PASS copied React usage compiles, imports its component, resizes proportionally and changes the actual rendered color through style overrides",
+  );
+  await page
+    .getByRole("tab", { name: "globals.css / @theme", exact: true })
+    .click();
+  const singleThemeCss = await page.locator("#code-output").textContent();
+  await page.getByRole("tab", { name: "Tailwind", exact: true }).click();
+  const singleThemeJsx = await page.locator("#code-output").textContent();
+  const singleCompiler = await compileTailwind(singleThemeCss, {
+    base: path.join(repo, "demo"),
+    onDependency() {},
+  });
+  const singleCandidates = [
+    ...singleThemeJsx.matchAll(/className="([^"]+)"/g),
+  ].flatMap((m) => m[1].split(/\s+/));
+  const singleCss = singleCompiler.build(singleCandidates);
+  const singleThemeModule = { exports: {} };
+  const singleThemeCompiled = transformSync(singleThemeJsx, {
+    loader: "jsx",
+    jsx: "automatic",
+    format: "cjs",
+  }).code;
+  const singleThemeRequire = (specifier) =>
+    specifier === "./globals.css"
+      ? {}
+      : specifier === `./${logoName}.jsx`
+        ? logoModule.exports
+        : createRequire(import.meta.url)(specifier);
+  new Function("module", "exports", "require", singleThemeCompiled)(
+    singleThemeModule,
+    singleThemeModule.exports,
+    singleThemeRequire,
+  );
+  const singleThemeMarkup = renderToStaticMarkup(
+    React.createElement(singleThemeModule.exports.default),
+  );
+  const singleThemePage = await page.context().newPage();
+  await singleThemePage.setContent(
+    `<style>${singleCss}</style><div id="theme-test">${singleThemeMarkup}</div>`,
+  );
+  const singlePaint = singleThemePage
+    .locator('#theme-test [fill^="var("]')
+    .first();
+  assert.equal(
+    await singlePaint.evaluate((el) => getComputedStyle(el).fill),
+    "rgb(139, 92, 246)",
+  );
+  await singleThemePage
+    .locator("#theme-test > section")
+    .evaluate((el) => el.classList.add("dark"));
+  assert.notEqual(
+    await singlePaint.evaluate((el) => getComputedStyle(el).fill),
+    "rgb(139, 92, 246)",
+  );
+  await singleThemePage.screenshot({
+    path: path.join(artifacts, "tailwind-dark-render.png"),
+  });
+  await singleThemePage.close();
+  await page.getByRole("button", { name: "Dark preview", exact: true }).click();
+  console.log(
+    "PASS generated standalone component changes actual fill through compiled Tailwind theme tokens without replacing SVG markup",
   );
   await page.screenshot({
     path: path.join(artifacts, "logo-editor.png"),

@@ -277,6 +277,10 @@ export function exportBundle(artifact, icons, options, preview = {}) {
       preview,
     ),
   );
+  if (preview.theme) {
+    add("src/globals.css", preview.theme.css);
+    add("src/Theme-example.jsx", preview.theme.jsx);
+  }
   const mode =
     options.mode === "original"
       ? " --preserve-colored"

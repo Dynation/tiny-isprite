@@ -18,6 +18,7 @@ import {
 import { buildSingleIcon } from "./lib/single-icon.js";
 import { iconVariables, variableCss, colorHex } from "./lib/palette.js";
 import { singleUsageSnippet } from "./lib/usage.js";
+import { buildThemeExample, darkColor } from "./lib/theme.js";
 import "./style.css";
 
 const github = "https://github.com/Dynation/tiny-isprite";
@@ -66,6 +67,9 @@ function App() {
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState("sparkle");
   const [color, setColor] = useState("#245cf3");
+  const [previewTheme, setPreviewTheme] = useState("light");
+  const [darkPalettes, setDarkPalettes] = useState({});
+  const [darkForegrounds, setDarkForegrounds] = useState({});
   const [size, setSize] = useState(32);
 
   const [tab, setTab] = useState("react");
@@ -178,38 +182,59 @@ function App() {
           size,
         )
       : snippet;
-  const tailwindClasses = [
-    "inline-flex",
-    `text-[${color}]`,
-    ...(!single && rotation ? [`rotate-[${rotation}deg]`] : []),
-    ...variables.map((v) => `[${v.name}:${colorHex(v.value)}]`),
-  ].join(" ");
-  const tailwindCode = single
-    ? `// In a project with Tailwind CSS installed.\n// Import the component downloaded from this playground.\nimport { ExampleIcon } from './${current?.name || "icon"}.jsx';\n\nexport function StyledIcon() {\n  return <ExampleIcon className=${JSON.stringify(tailwindClasses)} aria-label="Your icon" />;\n}`
-    : `// In a project with Tailwind CSS installed.\nimport { Icon } from 'tiny-isprite';\nimport sprite from './generated/sprite.js';\n\nexport function StyledIcon() {\n  return (\n    <>\n      {sprite.cssUrl && <link rel="stylesheet" href={sprite.cssUrl} />}\n      <span className=${JSON.stringify(tailwindClasses)}>\n        <Icon name=${JSON.stringify(current?.name || "icon")} spriteUrl={sprite.url} prefix={sprite.prefix} size={${size}} />\n      </span>\n    </>\n  );\n}`;
+  const themeExample = buildThemeExample({
+    name: current?.name || "icon",
+    variables: variables.map((v) => ({ ...v, value: colorHex(v.value) })),
+    color,
+    darkPalette: darkPalettes[current?.name],
+    foregroundDark: darkForegrounds[current?.name] || "#e2e8f0",
+    single,
+    size,
+    aspectRatio: artifact?.selected?.aspectRatio || 1,
+    rotation,
+  });
+  const tailwindCode = themeExample.jsx;
+  const activePalette = Object.fromEntries(
+    themeExample.paints.map((v) => [
+      v.name,
+      previewTheme === "dark" ? v.dark : v.value,
+    ]),
+  );
+  function setDarkVariable(name, value) {
+    if (!/^#[\da-f]{6}$/i.test(value) || !current) return;
+    setDarkPalettes((previous) => ({
+      ...previous,
+      [current.name]: { ...previous[current.name], [name]: value },
+    }));
+    setPreviewTheme("dark");
+  }
   const code =
     tab === "usage"
       ? usageCode
-      : tab === "css"
-        ? paletteCode
-        : tab === "tailwind"
-          ? tailwindCode
-          : tab === "react"
-            ? snippet
-            : tab === "sprite"
-              ? (single ? artifact?.single?.svg : artifact?.sprite) || ""
-              : artifact?.module || "";
+      : tab === "theme"
+        ? themeExample.css
+        : tab === "css"
+          ? paletteCode
+          : tab === "tailwind"
+            ? tailwindCode
+            : tab === "react"
+              ? snippet
+              : tab === "sprite"
+                ? (single ? artifact?.single?.svg : artifact?.sprite) || ""
+                : artifact?.module || "";
   const tabs = single
     ? [
         ["usage", "React usage"],
         ["react", "React component"],
         ["tailwind", "Tailwind"],
+        ["theme", "globals.css / @theme"],
         ["css", "CSS variables"],
         ["sprite", "Inline SVG"],
       ]
     : [
         ["react", "React usage"],
         ["tailwind", "Tailwind"],
+        ["theme", "globals.css / @theme"],
         ["css", "CSS variables"],
         ["sprite", "SVG sprite"],
         ["manifest", "Manifest"],
@@ -218,6 +243,7 @@ function App() {
     setOptions((previous) => ({ ...previous, [key]: value }));
   function setVariable(name, value) {
     if (!current || !/^#[\da-f]{6}$/i.test(value)) return;
+    setPreviewTheme("light");
     setOptions((previous) => ({
       ...previous,
       palette: {
@@ -235,6 +261,17 @@ function App() {
       return { ...previous, palette, strokeWidths };
     });
     setRotation(0);
+    setDarkPalettes((previous) => {
+      const next = { ...previous };
+      delete next[current.name];
+      return next;
+    });
+    setDarkForegrounds((previous) => {
+      const next = { ...previous };
+      delete next[current.name];
+      return next;
+    });
+    setPreviewTheme("light");
   }
   const fileLimit = single ? SINGLE_FILE_SIZE : MAX_FILE_SIZE;
   async function addFiles(files) {
@@ -305,6 +342,7 @@ function App() {
           size,
           color,
           rotation,
+          theme: themeExample,
         }),
         "tiny-isprite-bundle.zip",
         "application/zip",
@@ -326,8 +364,13 @@ function App() {
       </div>
       <div className="inspector-body">
         <div
-          className="selected-preview"
-          style={{ color }}
+          className={`selected-preview theme-preview ${previewTheme === "dark" ? "dark" : ""}`}
+          data-preview-theme={previewTheme}
+          style={{
+            ...activePalette,
+            color:
+              previewTheme === "dark" ? themeExample.foregroundDark : color,
+          }}
           aria-label={`Live preview of ${current.name}`}
         >
           {artifact?.selected && (
@@ -343,6 +386,22 @@ function App() {
         </div>
         <div className="palette-editor">
           <h4>Colors you can change</h4>
+          <div className="theme-toggle" role="group" aria-label="Preview theme">
+            {["light", "dark"].map((value) => (
+              <button
+                key={value}
+                type="button"
+                aria-pressed={previewTheme === value}
+                onClick={() => setPreviewTheme(value)}
+              >
+                {value === "light" ? "Light preview" : "Dark preview"}
+              </button>
+            ))}
+          </div>
+          <p>
+            Light and dark palettes belong to this icon. Switching themes keeps
+            the same SVG.
+          </p>
           {options.mode !== "variables" ? (
             <>
               <p>
@@ -376,7 +435,7 @@ function App() {
                       }
                     />
                     <span>
-                      <b>{variable.property}</b>
+                      <b>{variable.property} · Light</b>
                       <code>{variable.name}</code>
                     </span>
                   </label>
@@ -398,6 +457,47 @@ function App() {
                     }}
                     onFocus={(event) => event.target.select()}
                   />
+                  <div className="dark-variable-row">
+                    <label className="variable-picker">
+                      <input
+                        type="color"
+                        aria-label={`Dark color ${variable.name}`}
+                        value={
+                          darkPalettes[current.name]?.[variable.name] ||
+                          darkColor(colorHex(variable.value))
+                        }
+                        onChange={(event) =>
+                          setDarkVariable(variable.name, event.target.value)
+                        }
+                      />
+                      <span>
+                        <b>{variable.property} · Dark</b>
+                        <code>{variable.name}</code>
+                      </span>
+                    </label>
+                    <input
+                      className="variable-value"
+                      aria-label={`Dark value ${variable.name}`}
+                      key={`dark-${variable.name}-${darkPalettes[current.name]?.[variable.name] || variable.value}`}
+                      defaultValue={
+                        darkPalettes[current.name]?.[variable.name] ||
+                        darkColor(colorHex(variable.value))
+                      }
+                      maxLength={7}
+                      onBlur={(event) => {
+                        if (/^#[\da-f]{6}$/i.test(event.target.value))
+                          setDarkVariable(variable.name, event.target.value);
+                        else
+                          event.target.value =
+                            darkPalettes[current.name]?.[variable.name] ||
+                            darkColor(colorHex(variable.value));
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") event.currentTarget.blur();
+                      }}
+                      onFocus={(event) => event.currentTarget.select()}
+                    />
+                  </div>
                 </div>
               ))}
               <button
@@ -426,6 +526,26 @@ function App() {
               )}
             </>
           )}
+          <label className="theme-foreground">
+            Dark currentColor{" "}
+            <input
+              type="color"
+              aria-label="Dark currentColor"
+              value={themeExample.foregroundDark}
+              onChange={(event) => {
+                setDarkForegrounds((previous) => ({
+                  ...previous,
+                  [current.name]: event.target.value,
+                }));
+                setPreviewTheme("dark");
+              }}
+            />
+          </label>
+          <p className="theme-help">
+            Use <b>globals.css / @theme</b> for light/dark design tokens, then{" "}
+            <b>Tailwind</b> for the component and toggle. SVG/React downloads
+            keep light defaults; theme examples contain both palettes.
+          </p>
           <label className="inspector-control">
             Line thickness{" "}
             <input
@@ -824,7 +944,10 @@ function App() {
                       aria-label="Preview color"
                       type="color"
                       value={color}
-                      onChange={(event) => setColor(event.target.value)}
+                      onChange={(event) => {
+                        setColor(event.target.value);
+                        setPreviewTheme("light");
+                      }}
                     />
                   </span>
                   <code>{color.toUpperCase()}</code>
@@ -991,6 +1114,52 @@ function App() {
             </button>
           )}
         </section>
+        <section
+          className="theme-guide usage-guide"
+          aria-label="Tailwind theme setup"
+        >
+          <h3>One icon. Two themes.</h3>
+          <ol>
+            <li>
+              <b>Merge globals.css / @theme</b> into your Tailwind v4 global
+              stylesheet. Light tokens live in <code>@theme static</code>;{" "}
+              <code>.dark</code> overrides those same tokens.
+            </li>
+            <li>
+              <b>Copy the Tailwind example.</b> Its literal classes connect the
+              icon’s variables to <code>--color-*</code> tokens. No inline
+              palette styles.
+            </li>
+            <li>
+              <b>Switch the theme.</b> The included button toggles a{" "}
+              <code>.dark</code> ancestor. For your whole app, use its existing
+              theme switch or toggle{" "}
+              <code>document.documentElement.classList.toggle('dark')</code>.
+              The custom dark variant makes <code>dark:</code> classes follow
+              that switch.
+            </li>
+          </ol>
+          <p>
+            This setup targets Tailwind v4. For v3, configure{" "}
+            <code>darkMode: 'class'</code> in tailwind.config.js;{" "}
+            <code>@theme</code> requires v4.{" "}
+            <a
+              href="https://tailwindcss.com/docs/theme"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Theme docs
+            </a>{" "}
+            ·{" "}
+            <a
+              href="https://tailwindcss.com/docs/dark-mode"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Dark mode docs
+            </a>
+          </p>
+        </section>
         <section className="output-section">
           <div className="code-panel">
             <div className="code-toolbar">
@@ -1130,6 +1299,28 @@ function App() {
                 Download CSS variables <span aria-hidden="true">↓</span>
               </button>
             )}
+            <button
+              className="download-single"
+              disabled={!ready}
+              onClick={() =>
+                download(themeExample.css, "globals.css", "text/css")
+              }
+            >
+              Download globals.css / @theme <span aria-hidden="true">↓</span>
+            </button>
+            <button
+              className="download-single"
+              disabled={!ready}
+              onClick={() =>
+                download(
+                  themeExample.jsx,
+                  "Theme-example.jsx",
+                  "text/javascript",
+                )
+              }
+            >
+              Download Tailwind theme example <span aria-hidden="true">↓</span>
+            </button>
             <div className="export-file">
               <Glyph name="file" size={15} />
               <span>
