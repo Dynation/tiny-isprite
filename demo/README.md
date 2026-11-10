@@ -115,3 +115,35 @@ retain light palette defaults; theme files contain both palettes.
 
 Official references: https://tailwindcss.com/docs/theme and
 https://tailwindcss.com/docs/dark-mode .
+
+## Optional fill animation
+
+Enable fill animation in the selected icon editor. It is off by default and does
+not alter SVG, React, sprite, palette or theme exports. Both Single and Sprite
+selection previews use the standalone vector for this effect.
+
+Flow inside shape rasterizes a temporary paint-label render on a grid with at
+most 320 pixels on its longest side. It finds connected components per paint and
+computes eight-neighbour graph distances from an inlet nearest the chosen point
+in each component. Increasing the progress threshold reveals the original vector
+with a temporary raster mask. It bends around holes but is an approximation, not
+a fluid simulation or handwriting reconstruction. Separate islands get separate
+inlets. At complete fill the mask is removed, restoring the exact vector.
+
+Generate CSS variables to obtain separate fill/stroke tracks. Each has a start
+time, duration and final percentage, allowing overlap and intentionally unfinished
+fills. X/Y controls or clicking the artwork choose the inlet. Playback is explicit,
+runs once, can pause, and is cleaned up on selection/source changes, disable and
+unmount. Reduced-motion users get the completed state on Play, with manual
+timeline scrubbing still available.
+
+The radial alternative uses the same preview controls but expands by geometric
+distance from the inlet instead of distance inside the shape. Its downloadable
+CSS-only example reveals the whole icon with clip-path: circle(). That shortcut
+does not include per-paint tracks or flow around holes. Shape-following flow
+currently needs JavaScript and is preview-only.
+
+Tests cover a U-shaped obstacle, disconnected pieces and paint boundaries,
+overlapping/incomplete tracks, browser playback, origin changes, reduced motion,
+CSS download and cleanup. Optional local QA can supply PLAYGROUND_FLOW_LOGO
+for an additional complex text/logo SVG; that file is not committed or uploaded.

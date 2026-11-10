@@ -310,6 +310,9 @@ examples. Palette edits are baked into exported sources for reproducible CLI bui
 The Tailwind v4 example includes global @theme tokens, separate light/dark palettes
 and a working theme toggle. Generated globals.css and component examples can be
 downloaded; Sprite ZIPs include these theme files.
+An optional fill-animation preview supports shape-following flow, radial reveal,
+per-paint timing and partial fills. A CSS-only whole-icon radial example can be
+downloaded; the shape-following prototype uses JavaScript and stays preview-only.
 Single mode supports SVGs up to 2 MB and exports up to 2048 px wide with the source
 aspect ratio.
 

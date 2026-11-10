@@ -1630,3 +1630,102 @@ footer > a:last-child span {
 .theme-guide a {
   color: #245cf3;
 }
+.fill-animation {
+  border-top: 1px solid #e1e5db;
+  margin-top: 22px;
+  padding-top: 20px;
+}
+.animation-enable {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.animation-enable input,
+.fill-animation input[type="range"] {
+  accent-color: #245cf3;
+}
+.fill-animation p {
+  color: #697761;
+  font-size: 12px;
+  line-height: 1.7;
+  margin: 12px 0;
+}
+.animation-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 12px 0;
+}
+.animation-controls label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1 1 120px;
+  min-width: 0;
+  font-size: 11px;
+}
+.animation-controls input,
+.animation-controls select {
+  max-width: 100%;
+  min-width: 0;
+  padding: 7px;
+  border: 1px solid #dfe3d9;
+  border-radius: 5px;
+  background: white;
+}
+.animation-controls input[type="range"] {
+  padding: 0;
+}
+.animation-tracks fieldset {
+  margin: 12px 0;
+  padding: 12px;
+  border: 1px solid #dfe3d9;
+  border-radius: 7px;
+  min-width: 0;
+}
+.animation-tracks legend {
+  font-size: 12px;
+  text-transform: capitalize;
+  padding: 0 5px;
+}
+.animation-tracks code {
+  font-size: 10px;
+  overflow-wrap: anywhere;
+}
+.animation-playback {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  margin-top: 16px;
+}
+.animation-playback label {
+  flex: 1 1 180px;
+  font-size: 12px;
+}
+.animation-playback input {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+}
+.animation-status {
+  font-size: 11px;
+  color: #697761;
+  margin-top: 12px;
+}
+.fill-animation summary {
+  cursor: pointer;
+  color: #245cf3;
+  font-size: 12px;
+}
+.fill-animation pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 11px;
+  line-height: 1.7;
+  background: #f2f4ee;
+  padding: 16px;
+  border-radius: 7px;
+}

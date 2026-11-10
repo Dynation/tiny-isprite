@@ -19,6 +19,7 @@ import { buildSingleIcon } from "./lib/single-icon.js";
 import { iconVariables, variableCss, colorHex } from "./lib/palette.js";
 import { singleUsageSnippet } from "./lib/usage.js";
 import { buildThemeExample, darkColor } from "./lib/theme.js";
+import { FillAnimation } from "./FillAnimation.jsx";
 import "./style.css";
 
 const github = "https://github.com/Dynation/tiny-isprite";
@@ -84,6 +85,7 @@ function App() {
     error: "",
   });
   const input = useRef(null);
+  const artworkRef = useRef(null);
   const copyTimer = useRef(null);
   const current = icons.find((icon) => icon.name === selected) || icons[0];
   const rotation = options.rotations?.[current?.name] || 0;
@@ -375,6 +377,7 @@ function App() {
         >
           {artifact?.selected && (
             <div
+              ref={artworkRef}
               className="selected-artwork"
               dangerouslySetInnerHTML={{ __html: artifact.selected.svg }}
             />
@@ -587,6 +590,13 @@ function App() {
           </p>
         </div>
       </div>
+      <FillAnimation
+        key={current.name}
+        svg={artifact?.selected?.svg || ""}
+        variables={variables}
+        targetRef={artworkRef}
+        aspectRatio={artifact?.selected?.aspectRatio || 1}
+      />
     </section>
   );
   return (

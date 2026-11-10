@@ -761,6 +761,171 @@ try {
   console.log(
     "PASS generated standalone component changes actual fill through compiled Tailwind theme tokens without replacing SVG markup",
   );
+  // Optional shape-following animation leaves the exported vector untouched.
+  const vectorBeforeFlow = await page
+    .locator(".selected-artwork path")
+    .evaluateAll((elements) => elements.map((el) => el.getAttribute("d")));
+  await page
+    .getByRole("checkbox", { name: "Enable fill animation", exact: true })
+    .check();
+  const playFill = page.getByRole("button", { name: "Play fill", exact: true });
+  await poll(() => playFill.isEnabled(), "distance field prepared");
+  const animationProgress = page.getByRole("slider", {
+    name: "Fill animation progress",
+    exact: true,
+  });
+  const targetSvg = page.locator(".selected-artwork > svg");
+  await animationProgress.fill("0");
+  await poll(
+    async () =>
+      (await page.locator(".animation-status").textContent()).includes("· 0 /"),
+    "empty flow",
+  );
+  assert.match(
+    await targetSvg.evaluate((el) => el.style.maskImage),
+    /data:image\/png/,
+  );
+  await animationProgress.fill("50");
+  await poll(async () => {
+    const text = await page.locator(".animation-status").textContent();
+    const m = text.match(/· (\d+) \/ (\d+)/);
+    return m && Number(m[1]) > 0 && Number(m[1]) < Number(m[2]);
+  }, "partially filled paint");
+  assert.deepEqual(
+    await page
+      .locator(".selected-artwork path")
+      .evaluateAll((elements) => elements.map((el) => el.getAttribute("d"))),
+    vectorBeforeFlow,
+  );
+  const animationGroups = await page
+    .locator(".animation-tracks fieldset > code")
+    .allTextContents();
+  await page
+    .getByLabel(`Animation start ${animationGroups[1]}`, { exact: true })
+    .fill("0.8");
+  await page
+    .getByLabel(`Animation duration ${animationGroups[1]}`, { exact: true })
+    .fill("1.2");
+  await page
+    .getByLabel(`Animation end ${animationGroups[0]}`, { exact: true })
+    .fill("55");
+  await animationProgress.fill("100");
+  assert.match(
+    await targetSvg.evaluate((el) => el.style.maskImage),
+    /data:image\/png/,
+  );
+  await page
+    .getByRole("combobox", { name: "Fill effect", exact: true })
+    .selectOption("radial");
+  await page
+    .getByRole("slider", { name: "Fill origin X", exact: true })
+    .fill("25");
+  await poll(() => playFill.isEnabled(), "new inlet prepared");
+  await animationProgress.fill("45");
+  await page.locator(".fill-animation summary").click();
+  const animationCssEvent = page.waitForEvent("download");
+  await page
+    .getByRole("button", { name: "Download radial animation CSS", exact: true })
+    .click();
+  const animationCssDownload = await animationCssEvent;
+  await animationCssDownload.saveAs(path.join(artifacts, "fill-reveal.css"));
+  assert.match(
+    await readFile(path.join(artifacts, "fill-reveal.css"), "utf8"),
+    /at 25% 50%/,
+  );
+  await page
+    .getByLabel(`Animation end ${animationGroups[0]}`, { exact: true })
+    .fill("100");
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await playFill.click();
+  assert.equal(await animationProgress.inputValue(), "100");
+  await poll(
+    async () =>
+      (await targetSvg.evaluate((el) => el.style.maskImage)) === "none",
+    "reduced motion complete vector",
+  );
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page
+    .getByRole("combobox", { name: "Fill effect", exact: true })
+    .selectOption("flow");
+  await playFill.click();
+  await poll(
+    async () =>
+      Number(await animationProgress.inputValue()) > 0 &&
+      Number(await animationProgress.inputValue()) < 100,
+    "live fill playback",
+  );
+  await page.getByRole("button", { name: "Pause fill", exact: true }).click();
+  await page.screenshot({
+    path: path.join(artifacts, "fill-animation.png"),
+    fullPage: true,
+  });
+  await page
+    .getByRole("checkbox", { name: "Enable fill animation", exact: true })
+    .uncheck();
+  assert.equal(await targetSvg.evaluate((el) => el.style.maskImage), "");
+  console.log(
+    "PASS optional shape-flow/radial preview, per-paint overlap and partial ends, CSS download, reduced motion, playback and cleanup",
+  );
+  if (process.env.PLAYGROUND_FLOW_LOGO) {
+    await page
+      .getByLabel("Upload SVG files", { exact: true })
+      .setInputFiles(process.env.PLAYGROUND_FLOW_LOGO);
+    await poll(
+      async () =>
+        (await page
+          .locator(".icon-card.selected .icon-select > span")
+          .textContent()) !== logoName,
+      "real flow logo selected",
+    );
+    await singleReady();
+    await page
+      .getByRole("checkbox", { name: "Enable fill animation", exact: true })
+      .check();
+    await poll(
+      () =>
+        page
+          .getByRole("button", { name: "Play fill", exact: true })
+          .isEnabled(),
+      "real text shape field",
+    );
+    await page
+      .getByRole("slider", { name: "Fill animation progress", exact: true })
+      .fill("50");
+    await poll(async () => {
+      const text = await page.locator(".animation-status").textContent();
+      const match = text.match(/· (\d+) \/ (\d+)/);
+      return (
+        match && Number(match[1]) > 0 && Number(match[1]) < Number(match[2])
+      );
+    }, "real text partial fill");
+    await page
+      .locator(".selected-preview")
+      .screenshot({ path: path.join(artifacts, "gariani-flow.png") });
+    await page.setViewportSize({ width: 390, height: 844 });
+    assert.equal(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth > innerWidth,
+      ),
+      false,
+    );
+    await page.setViewportSize({ width: 1440, height: 1080 });
+    await page
+      .locator(".icon-select")
+      .filter({ hasText: new RegExp(`^${logoName}$`) })
+      .click();
+    await singleReady();
+    assert.equal(
+      await page
+        .getByRole("checkbox", { name: "Enable fill animation", exact: true })
+        .isChecked(),
+      false,
+    );
+    console.log(
+      "PASS actual Gariani lettering: shape-field preparation, partial paint and cleanup on selection",
+    );
+  }
+
   await page.screenshot({
     path: path.join(artifacts, "logo-editor.png"),
     fullPage: true,
