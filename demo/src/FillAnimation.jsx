@@ -20,11 +20,12 @@ export function FillAnimation({
   targetRef,
   aspectRatio,
   active = true,
+  initiallyEnabled = false,
   name = "icon",
   palettes = { light: {}, dark: {} },
   defaultTheme = "light",
 }) {
-  const [enabled, setEnabled] = useState(false);
+  const [enabled, setEnabled] = useState(initiallyEnabled);
   const [mode, setMode] = useState("flow");
   const [x, setX] = useState(50),
     [y, setY] = useState(50);
@@ -47,7 +48,7 @@ export function FillAnimation({
     : [{ name: "all-paint", property: "All visible paint" }];
   const tracks = groups.map((group, index) => ({
     name: group.name,
-    start: 0,
+    start: initiallyEnabled ? Number((index * 0.18).toFixed(2)) : 0,
     duration: 1.8,
     end: 100,
     ...settings[group.name],

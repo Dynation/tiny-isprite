@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { Icon } from "tiny-isprite";
-import { samples } from "./samples.js";
+import { samples, featuredSamples } from "./samples.js";
 import {
   buildProject,
   cleanSvg,
@@ -54,27 +54,47 @@ function Glyph({ name, size = 18, ...props }) {
   );
 }
 function App() {
+  const [pageTheme, setPageTheme] = useState(() => {
+    try {
+      return localStorage.getItem("isprite-page-theme") === "light"
+        ? "light"
+        : "dark";
+    } catch {
+      return "dark";
+    }
+  });
+  useEffect(() => {
+    document.documentElement.dataset.pageTheme = pageTheme;
+    document
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute("content", pageTheme === "dark" ? "#11151d" : "#f6f6f3");
+    try {
+      localStorage.setItem("isprite-page-theme", pageTheme);
+    } catch {}
+  }, [pageTheme]);
   const [icons, setIcons] = useState(() =>
     samples.map((icon) => ({ ...icon })),
   );
-  const [target, setTarget] = useState("sprite");
+  const [target, setTarget] = useState("single");
   const single = target === "single";
   const [options, setOptions] = useState({
     ...defaultOptions,
+    mode: "variables",
+    allColors: true,
     editablePalette: true,
     palette: {},
     strokeWidths: {},
   });
   const [query, setQuery] = useState("");
-  const [selected, setSelected] = useState("sparkle");
+  const [selected, setSelected] = useState("orbit");
   const [color, setColor] = useState("#245cf3");
   const [previewTheme, setPreviewTheme] = useState("light");
   const [darkPalettes, setDarkPalettes] = useState({});
   const [darkForegrounds, setDarkForegrounds] = useState({});
-  const [size, setSize] = useState(32);
+  const [size, setSize] = useState(256);
 
-  const [tab, setTab] = useState("react");
-  const [inspectorTab, setInspectorTab] = useState("colors");
+  const [tab, setTab] = useState("usage");
+  const [inspectorTab, setInspectorTab] = useState("animation");
   const inspectorControls = useRef(null);
   function selectInspectorTab(value) {
     setInspectorTab(value);
@@ -668,6 +688,7 @@ function App() {
             <FillAnimation
               key={current.name}
               active={inspectorTab === "animation"}
+              initiallyEnabled={!!current.featured}
               name={current.name}
               defaultTheme={previewTheme}
               palettes={{
@@ -708,8 +729,19 @@ function App() {
             tiny-isprite<span className="brand-dot">.</span>
           </strong>
         </a>
-        <span className="header-label">THE SPRITE PLAYGROUND</span>
+        <span className="header-label">SVG COLOR & MOTION LAB</span>
         <nav aria-label="Main">
+          <button
+            className="page-theme-toggle"
+            type="button"
+            aria-label="Dark page theme"
+            aria-pressed={pageTheme === "dark"}
+            onClick={() =>
+              setPageTheme(pageTheme === "dark" ? "light" : "dark")
+            }
+          >
+            {pageTheme === "dark" ? "☾ Dark" : "☀ Light"}
+          </button>
           <a href={`${github}#quick-start`} target="_blank" rel="noreferrer">
             Documentation <Glyph name="arrow" size={14} />
           </a>
@@ -726,36 +758,34 @@ function App() {
               <span className="live-dot" /> SMALL PACKAGE. BIG ICON ENERGY.
             </p>
             <h1>
-              Your icons.
-              <br />
-              All together<span>.</span>
+              Give your SVG
+              <br />a little life<span>.</span>
             </h1>
             <p className="intro-copy">
-              Build a sprite, or take one icon inline.
+              Recolor it. Make it flow. Take it with you.
               <br />
-              Preview it in React. Make it yours. Ship it.
+              Try the artwork below or bring your own SVG.
             </p>
           </div>
-          <div className="intro-aside">
-            <span className="mini-label">START SMALL. BUILD SOMETHING.</span>
-            <button
-              className="install"
-              onClick={() => copy("npm install tiny-isprite", "install")}
-            >
-              <span>
-                <b>$</b> npm install tiny-isprite
-              </span>
-              <Glyph name={copied === "install" ? "check" : "copy"} size={17} />
-            </button>
+          <div className="intro-aside intro-promise">
+            <span className="mini-label">
+              OPEN THE PLAYGROUND. START PLAYING.
+            </span>
             <p>
-              <span className="shield-icon">↳</span> Everything happens in your
-              browser.
+              Free to try. No account.
               <br />
-              <span className="indent">Your files stay yours.</span>
+              Your SVGs stay in your browser.
             </p>
+            <a className="button secondary" href="#playground">
+              Try colors & motion ↓
+            </a>
           </div>
         </section>
-        <section className="workspace" aria-label="SVG sprite builder">
+        <section
+          id="playground"
+          className="workspace"
+          aria-label="SVG sprite builder"
+        >
           <div className="workspace-top">
             <div className="workspace-title">
               <Glyph name="grid" />
@@ -768,7 +798,7 @@ function App() {
                 disabled={reading}
                 onClick={() => {
                   setIcons(samples.map((icon) => ({ ...icon })));
-                  setSelected("sparkle");
+                  setSelected("orbit");
                   setQuery("");
                   setNotice("Sample set loaded.");
                 }}
@@ -831,8 +861,8 @@ function App() {
               </fieldset>
               {single && (
                 <p className="field-note">
-                  Select one icon below. Export a standalone SVG or React
-                  component. No package installation needed.
+                  Choose artwork or upload your own SVG. Export a standalone SVG
+                  or React component. No package installation needed.
                 </p>
               )}
               <div hidden={single}>
@@ -941,106 +971,131 @@ function App() {
               </div>
             </aside>
             <div className="stage">
-              <div className="stage-toolbar">
-                <div className="section-label">
-                  YOUR ICONS{" "}
-                  <span>{icons.length.toString().padStart(2, "0")}</span>
-                </div>
-                <label className="search">
-                  <Glyph name="search" size={15} />
-                  <input
-                    aria-label="Search icons"
-                    placeholder="Find an icon…"
-                    value={query}
-                    onChange={(event) => setQuery(event.target.value)}
-                  />
-                </label>
-              </div>
-              {single && inspector}
               <div
-                className={`icon-canvas ${single ? "single-gallery" : ""} ${dragging ? "dragging" : ""}`}
-                style={{ "--preview-color": color }}
-                onDragOver={(event) => {
-                  event.preventDefault();
-                  setDragging(true);
-                }}
-                onDragLeave={(event) => {
-                  if (!event.currentTarget.contains(event.relatedTarget))
-                    setDragging(false);
-                }}
-                onDrop={(event) => {
-                  event.preventDefault();
-                  setDragging(false);
-                  addFiles(event.dataTransfer.files);
-                }}
+                className="featured-samples"
+                aria-label="Featured demo artwork"
               >
-                {dragging && (
-                  <div className="drop-overlay">
-                    <Glyph name="upload" size={30} />
-                    Drop your SVGs here
-                  </div>
-                )}
-                <div className="icon-grid">
-                  {matches.map((icon) => (
-                    <div
-                      className={`icon-card ${current?.name === icon.name ? "selected" : ""}`}
-                      key={icon.name}
-                    >
-                      <button
-                        className="icon-select"
-                        aria-pressed={current?.name === icon.name}
-                        onClick={() => setSelected(icon.name)}
-                        title={icon.original}
-                      >
-                        {artifact && (
-                          <Icon
-                            name={icon.name}
-                            spriteUrl={build.url}
-                            prefix={artifact.manifest.prefix}
-                            size={single ? Math.min(size, 48) : size}
-                          />
-                        )}
-                        <span>{icon.name}</span>
-                      </button>
-                      <button
-                        className="remove-icon"
-                        aria-label={`Remove ${icon.name}`}
-                        onClick={() => remove(icon.name)}
-                        disabled={reading}
-                      >
-                        <Glyph name="close" size={12} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-                {!matches.length && (
-                  <div className="empty-state">
-                    <Glyph name="grid" size={30} />
-                    <h3>
-                      {icons.length
-                        ? "Nothing by that name."
-                        : "A blank canvas. A fresh start."}
-                    </h3>
-                    <p>
-                      {icons.length
-                        ? "Try another search."
-                        : "Drop SVG files here or load the sample set."}
-                    </p>
-                  </div>
-                )}
-                <button
-                  className="drop-hint"
-                  onClick={() => input.current.click()}
-                  disabled={reading}
-                >
-                  <Glyph name="upload" size={15} />
-                  Drop SVGs here, or <b>browse files</b>
-                  <span>
-                    Up to {MAX_ICONS} SVGs · {single ? "2 MB" : "128 KB"} each
-                  </span>
-                </button>
+                <span className="section-label">TRY AN EXAMPLE</span>
+                {featuredSamples.map((sample) => (
+                  <button
+                    key={sample.name}
+                    className="sample-choice"
+                    aria-pressed={current?.name === sample.name}
+                    disabled={!icons.some((icon) => icon.name === sample.name)}
+                    onClick={() => setSelected(sample.name)}
+                  >
+                    {sample.name === "orbit"
+                      ? "Orbit"
+                      : sample.name === "bloom"
+                        ? "Bloom"
+                        : "Ribbon"}
+                  </button>
+                ))}
               </div>
-              {!single && inspector}
+              {inspector}
+              <details className="icon-library">
+                <summary>
+                  More icons & sprite collection · {icons.length}
+                </summary>
+                <div className="stage-toolbar">
+                  <div className="section-label">
+                    YOUR ICONS{" "}
+                    <span>{icons.length.toString().padStart(2, "0")}</span>
+                  </div>
+                  <label className="search">
+                    <Glyph name="search" size={15} />
+                    <input
+                      aria-label="Search icons"
+                      placeholder="Find an icon…"
+                      value={query}
+                      onChange={(event) => setQuery(event.target.value)}
+                    />
+                  </label>
+                </div>
+                <div
+                  className={`icon-canvas ${single ? "single-gallery" : ""} ${dragging ? "dragging" : ""}`}
+                  style={{ "--preview-color": color }}
+                  onDragOver={(event) => {
+                    event.preventDefault();
+                    setDragging(true);
+                  }}
+                  onDragLeave={(event) => {
+                    if (!event.currentTarget.contains(event.relatedTarget))
+                      setDragging(false);
+                  }}
+                  onDrop={(event) => {
+                    event.preventDefault();
+                    setDragging(false);
+                    addFiles(event.dataTransfer.files);
+                  }}
+                >
+                  {dragging && (
+                    <div className="drop-overlay">
+                      <Glyph name="upload" size={30} />
+                      Drop your SVGs here
+                    </div>
+                  )}
+                  <div className="icon-grid">
+                    {matches.map((icon) => (
+                      <div
+                        className={`icon-card ${current?.name === icon.name ? "selected" : ""}`}
+                        key={icon.name}
+                      >
+                        <button
+                          className="icon-select"
+                          aria-pressed={current?.name === icon.name}
+                          onClick={() => setSelected(icon.name)}
+                          title={icon.original}
+                        >
+                          {artifact && (
+                            <Icon
+                              name={icon.name}
+                              spriteUrl={build.url}
+                              prefix={artifact.manifest.prefix}
+                              size={single ? Math.min(size, 48) : size}
+                            />
+                          )}
+                          <span>{icon.name}</span>
+                        </button>
+                        <button
+                          className="remove-icon"
+                          aria-label={`Remove ${icon.name}`}
+                          onClick={() => remove(icon.name)}
+                          disabled={reading}
+                        >
+                          <Glyph name="close" size={12} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  {!matches.length && (
+                    <div className="empty-state">
+                      <Glyph name="grid" size={30} />
+                      <h3>
+                        {icons.length
+                          ? "Nothing by that name."
+                          : "A blank canvas. A fresh start."}
+                      </h3>
+                      <p>
+                        {icons.length
+                          ? "Try another search."
+                          : "Drop SVG files here or load the sample set."}
+                      </p>
+                    </div>
+                  )}
+                  <button
+                    className="drop-hint"
+                    onClick={() => input.current.click()}
+                    disabled={reading}
+                  >
+                    <Glyph name="upload" size={15} />
+                    Drop SVGs here, or <b>browse files</b>
+                    <span>
+                      Up to {MAX_ICONS} SVGs · {single ? "2 MB" : "128 KB"} each
+                    </span>
+                  </button>
+                </div>
+              </details>
               <div className="preview-controls">
                 <label className="color-control">
                   Preview color{" "}
@@ -1127,144 +1182,6 @@ function App() {
           </div>
         )}
         {artifact?.css && <style>{artifact.css}</style>}
-        <section className="usage-guide" aria-label="How to apply your changes">
-          <h3>Use your changes in React</h3>
-          {single ? (
-            <ol>
-              <li>
-                <b>Save the component.</b> Download React component as{" "}
-                <code>{current?.name || "icon"}.jsx</code>.
-              </li>
-              <li>
-                <b>Open React usage.</b> Copy the example into another file
-                beside it, then render <code>&lt;IconExample /&gt;</code>.
-              </li>
-              {variables.length ? (
-                <li>
-                  <b>Replace color values.</b> In <code>iconColors</code>, keep
-                  each <code>--variable-name</code> and change its HEX value.
-                  Pass that object as <code>style</code> to{" "}
-                  <code>&lt;ExampleIcon&gt;</code>. No extra CSS import is
-                  required.
-                </li>
-              ) : (
-                <li>
-                  <b>Change the color prop.</b> It changes paints that use{" "}
-                  <code>currentColor</code>. For individually editable colors,
-                  choose <b>Generate CSS variables</b> first; original fixed
-                  fills keep their colors.
-                </li>
-              )}
-            </ol>
-          ) : (
-            <ol>
-              <li>
-                <b>Download the bundle.</b> Install <code>tiny-isprite</code>;
-                copy <code>public/</code> and <code>src/generated/</code> into
-                your app.
-              </li>
-              <li>
-                <b>Copy React usage.</b> Render{" "}
-                <code>&lt;ExampleIcon /&gt;</code>. It loads the generated
-                stylesheet and manifest.
-              </li>
-              <li>
-                <b>Replace color values.</b>{" "}
-                {variables.length ? (
-                  <>
-                    Keep variable names in <code>iconStyle</code> and edit the
-                    values.
-                  </>
-                ) : (
-                  <>
-                    Change <code>color</code> in <code>iconStyle</code> for{" "}
-                    <code>currentColor</code> paints; generate CSS variables for
-                    individual colors.
-                  </>
-                )}{" "}
-                Style goes on the <code>&lt;span&gt;</code> wrapper because the
-                published <code>Icon</code> has no <code>style</code> prop.
-              </li>
-            </ol>
-          )}
-          <p>
-            <code>color</code> only affects <code>currentColor</code> paints.
-            CSS-variable colors are overridden through <code>style</code> or a
-            CSS class.{" "}
-            {single ? (
-              <>
-                Change <code>width</code> in the usage example; the calculated
-                height keeps your image’s proportions. <code>className</code>{" "}
-                accepts your own CSS or Tailwind classes.
-              </>
-            ) : (
-              <>
-                Use <code>size</code> for dimensions and <code>className</code>{" "}
-                for CSS or Tailwind classes.
-              </>
-            )}
-          </p>
-          {variables.length > 0 && (
-            <p>
-              Prefer a CSS file? Import the downloaded CSS, use{" "}
-              <code>className="my-icon"</code>{" "}
-              {single ? "on ExampleIcon" : "on the span wrapper"}, and remove
-              the inline variable values from <code>style</code>. Inline styles
-              take priority over class rules.
-            </p>
-          )}
-          {single && (
-            <button className="palette-copy" onClick={() => setTab("usage")}>
-              Show React usage example
-            </button>
-          )}
-        </section>
-        <section
-          className="theme-guide usage-guide"
-          aria-label="Tailwind theme setup"
-        >
-          <h3>One icon. Two themes.</h3>
-          <ol>
-            <li>
-              <b>Merge globals.css / @theme</b> into your Tailwind v4 global
-              stylesheet. Light tokens live in <code>@theme static</code>;{" "}
-              <code>.dark</code> overrides those same tokens.
-            </li>
-            <li>
-              <b>Copy the Tailwind example.</b> Its literal classes connect the
-              icon’s variables to <code>--color-*</code> tokens. No inline
-              palette styles.
-            </li>
-            <li>
-              <b>Switch the theme.</b> The included button toggles a{" "}
-              <code>.dark</code> ancestor. For your whole app, use its existing
-              theme switch or toggle{" "}
-              <code>document.documentElement.classList.toggle('dark')</code>.
-              The custom dark variant makes <code>dark:</code> classes follow
-              that switch.
-            </li>
-          </ol>
-          <p>
-            This setup targets Tailwind v4. For v3, configure{" "}
-            <code>darkMode: 'class'</code> in tailwind.config.js;{" "}
-            <code>@theme</code> requires v4.{" "}
-            <a
-              href="https://tailwindcss.com/docs/theme"
-              target="_blank"
-              rel="noreferrer"
-            >
-              Theme docs
-            </a>{" "}
-            ·{" "}
-            <a
-              href="https://tailwindcss.com/docs/dark-mode"
-              target="_blank"
-              rel="noreferrer"
-            >
-              Dark mode docs
-            </a>
-          </p>
-        </section>
         <section className="output-section">
           <div className="code-panel">
             <div className="code-toolbar">
@@ -1450,6 +1367,183 @@ function App() {
               </span>
             </div>
           </aside>
+        </section>
+        <section className="support-note" aria-label="Support the project">
+          <div>
+            <h3>Enjoying the playground?</h3>
+            <p>Your support helps me build more little tools like this.</p>
+          </div>
+          <a
+            className="button secondary"
+            href="https://ko-fi.com/dynation"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Buy me a coffee ↗
+          </a>
+        </section>
+        <section className="usage-guide" aria-label="How to apply your changes">
+          <h3>Use your changes in React</h3>
+          {single ? (
+            <ol>
+              <li>
+                <b>Save the component.</b> Download React component as{" "}
+                <code>{current?.name || "icon"}.jsx</code>.
+              </li>
+              <li>
+                <b>Open React usage.</b> Copy the example into another file
+                beside it, then render <code>&lt;IconExample /&gt;</code>.
+              </li>
+              {variables.length ? (
+                <li>
+                  <b>Replace color values.</b> In <code>iconColors</code>, keep
+                  each <code>--variable-name</code> and change its HEX value.
+                  Pass that object as <code>style</code> to{" "}
+                  <code>&lt;ExampleIcon&gt;</code>. No extra CSS import is
+                  required.
+                </li>
+              ) : (
+                <li>
+                  <b>Change the color prop.</b> It changes paints that use{" "}
+                  <code>currentColor</code>. For individually editable colors,
+                  choose <b>Generate CSS variables</b> first; original fixed
+                  fills keep their colors.
+                </li>
+              )}
+            </ol>
+          ) : (
+            <ol>
+              <li>
+                <b>Download the bundle.</b> Install <code>tiny-isprite</code>;
+                copy <code>public/</code> and <code>src/generated/</code> into
+                your app.
+              </li>
+              <li>
+                <b>Copy React usage.</b> Render{" "}
+                <code>&lt;ExampleIcon /&gt;</code>. It loads the generated
+                stylesheet and manifest.
+              </li>
+              <li>
+                <b>Replace color values.</b>{" "}
+                {variables.length ? (
+                  <>
+                    Keep variable names in <code>iconStyle</code> and edit the
+                    values.
+                  </>
+                ) : (
+                  <>
+                    Change <code>color</code> in <code>iconStyle</code> for{" "}
+                    <code>currentColor</code> paints; generate CSS variables for
+                    individual colors.
+                  </>
+                )}{" "}
+                Style goes on the <code>&lt;span&gt;</code> wrapper because the
+                published <code>Icon</code> has no <code>style</code> prop.
+              </li>
+            </ol>
+          )}
+          <p>
+            <code>color</code> only affects <code>currentColor</code> paints.
+            CSS-variable colors are overridden through <code>style</code> or a
+            CSS class.{" "}
+            {single ? (
+              <>
+                Change <code>width</code> in the usage example; the calculated
+                height keeps your image’s proportions. <code>className</code>{" "}
+                accepts your own CSS or Tailwind classes.
+              </>
+            ) : (
+              <>
+                Use <code>size</code> for dimensions and <code>className</code>{" "}
+                for CSS or Tailwind classes.
+              </>
+            )}
+          </p>
+          {variables.length > 0 && (
+            <p>
+              Prefer a CSS file? Import the downloaded CSS, use{" "}
+              <code>className="my-icon"</code>{" "}
+              {single ? "on ExampleIcon" : "on the span wrapper"}, and remove
+              the inline variable values from <code>style</code>. Inline styles
+              take priority over class rules.
+            </p>
+          )}
+          {single && (
+            <button className="palette-copy" onClick={() => setTab("usage")}>
+              Show React usage example
+            </button>
+          )}
+        </section>
+        <section
+          className="theme-guide usage-guide"
+          aria-label="Tailwind theme setup"
+        >
+          <h3>One icon. Two themes.</h3>
+          <ol>
+            <li>
+              <b>Merge globals.css / @theme</b> into your Tailwind v4 global
+              stylesheet. Light tokens live in <code>@theme static</code>;{" "}
+              <code>.dark</code> overrides those same tokens.
+            </li>
+            <li>
+              <b>Copy the Tailwind example.</b> Its literal classes connect the
+              icon’s variables to <code>--color-*</code> tokens. No inline
+              palette styles.
+            </li>
+            <li>
+              <b>Switch the theme.</b> The included button toggles a{" "}
+              <code>.dark</code> ancestor. For your whole app, use its existing
+              theme switch or toggle{" "}
+              <code>document.documentElement.classList.toggle('dark')</code>.
+              The custom dark variant makes <code>dark:</code> classes follow
+              that switch.
+            </li>
+          </ol>
+          <p>
+            This setup targets Tailwind v4. For v3, configure{" "}
+            <code>darkMode: 'class'</code> in tailwind.config.js;{" "}
+            <code>@theme</code> requires v4.{" "}
+            <a
+              href="https://tailwindcss.com/docs/theme"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Theme docs
+            </a>{" "}
+            ·{" "}
+            <a
+              href="https://tailwindcss.com/docs/dark-mode"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Dark mode docs
+            </a>
+          </p>
+        </section>
+        <section
+          className="developer-setup usage-guide"
+          aria-label="Install tiny-isprite"
+        >
+          <span className="mini-label">FOR YOUR NEXT PROJECT</span>
+          <h3>Bring tiny-isprite into your app</h3>
+          <p>
+            The editor works without installation. For automated sprite builds
+            and the React Icon component, install the package.
+          </p>
+          <button
+            className="install"
+            onClick={() => copy("npm install tiny-isprite", "install")}
+          >
+            <span>
+              <b>$</b> npm install tiny-isprite
+            </span>
+            <Glyph name={copied === "install" ? "check" : "copy"} size={17} />
+          </button>
+          <p>
+            <a href={`${github}#quick-start`} target="_blank" rel="noreferrer">
+              Read the setup guide ↗
+            </a>
+          </p>
         </section>
         <section className="how-it-works">
           <div>

@@ -198,3 +198,20 @@ Animation ZIP export is available at the top of the animation pane, in the stick
 Timeline block. The general downloads panel includes Open animation export, which
 opens the correct tab, scrolls to the selected icon and focuses Enable fill
 animation. Its caption explains the remaining enable/export steps.
+
+### First visit and page theme
+
+The playground starts with the original multicolor Orbit artwork in Single icon
+mode at 256px. Generate CSS variables and Include multicolor fills and strokes
+are enabled. Fill animation is ready to play for the three featured samples;
+uploaded artwork still requires opting in. Orbit, Bloom and Ribbon are original
+MIT-licensed demo artwork. The full sprite collection is available in the
+collapsed More icons & sprite collection panel below the selected editor.
+
+The whole page starts dark. The header theme button saves the page theme in
+localStorage when available; the editor works when storage is blocked. This is
+independent of the artwork's Light preview / Dark preview palette switch.
+Downloads precede the React/Tailwind guides, package installation is near the end,
+and the optional Ko-fi link follows exports without a popup or blocking step.
+The current Sites address remains the preview location; deployment does not
+change the audience or enable public access.

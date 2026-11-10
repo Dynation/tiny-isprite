@@ -1858,3 +1858,325 @@ footer > a:last-child span {
   font-size: 12px;
   line-height: 1.6;
 }
+
+/* Page theme is separate from the artwork's light/dark palette preview. */
+html[data-page-theme="dark"] {
+  color-scheme: dark;
+  color: #e5e9f2;
+  background: #11151d;
+  --ink: #e5e9f2;
+  --blue: #87a8ff;
+  --muted: #a3afc4;
+  --border: #323c4e;
+}
+.page-theme-toggle {
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 8px 12px;
+  white-space: nowrap;
+  font-size: 12px;
+}
+.intro-promise {
+  padding-top: 0;
+}
+.intro-promise p {
+  font-size: 14px;
+  line-height: 1.8;
+}
+.intro-promise .button {
+  width: fit-content;
+}
+.featured-samples {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+.sample-choice {
+  padding: 9px 15px;
+  border-radius: 30px;
+  border: 1px solid var(--border);
+  font-size: 12px;
+}
+.sample-choice[aria-pressed="true"] {
+  color: #245cf3;
+  border-color: #245cf3;
+  background: #edf2ff;
+}
+.icon-library {
+  margin-top: 20px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px;
+}
+.icon-library summary {
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+}
+.icon-library[open] summary {
+  margin-bottom: 20px;
+}
+.icon-library .icon-canvas {
+  min-height: 160px;
+}
+.support-note {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  border-block: 1px solid var(--border);
+  padding: 24px 0;
+  margin: 24px 0;
+}
+.support-note h3 {
+  margin: 0 0 8px;
+  font-size: 17px;
+}
+.support-note p {
+  margin: 0;
+  font-size: 13px;
+  color: #6b7565;
+}
+.support-note a {
+  flex-shrink: 0;
+}
+.developer-setup .install {
+  max-width: 360px;
+}
+html[data-page-theme="dark"]
+  :is(
+    .workspace,
+    .settings,
+    .stage,
+    .workspace-top,
+    .workspace-status,
+    .icon-card,
+    .search,
+    .mode-option,
+    .selected-preview,
+    .variable-value,
+    .theme-toggle,
+    .inspector-tabs,
+    .animation-playback,
+    .animation-track,
+    .animation-enable,
+    .usage-guide,
+    .theme-guide,
+    .safe-note,
+    .notice,
+    .version,
+    .small-badge,
+    .export-file,
+    .animation-export-entry
+  ) {
+  background-color: #191f2b;
+  border-color: #323c4e;
+}
+html[data-page-theme="dark"]
+  :is(.icon-inspector, .icon-library, .selected-preview, .theme-guide) {
+  border-color: #323c4e;
+}
+html[data-page-theme="dark"]
+  :is(
+    .field-note,
+    .intro-copy,
+    .intro-aside p,
+    .mini-label,
+    .eyebrow,
+    .header-label,
+    .section-label,
+    .mode-option small,
+    .toggle-row small,
+    .safe-note,
+    .selected-preview small,
+    .preview-footnote,
+    .theme-help,
+    .theme-foreground,
+    .animation-help,
+    .animation-track small,
+    .usage-guide p,
+    .usage-guide li,
+    .export-panel p,
+    .how-it-works p,
+    .support-note p,
+    .code-caption,
+    footer p,
+    footer > a,
+    .text-button,
+    .preview-controls,
+    .workspace-status,
+    .drop-hint,
+    .size-control,
+    .color-control,
+    .search input,
+    .search input::placeholder,
+    .inspector-control,
+    .variable-picker b,
+    .fill-animation p,
+    .fill-animation label,
+    .animation-export-entry p
+  ) {
+  color: #a9b6cc;
+}
+html[data-page-theme="dark"]
+  :is(
+    h1,
+    h2,
+    h3,
+    h4,
+    .field-label,
+    .mode-option b,
+    .variable-picker code,
+    .preview-controls code,
+    .usage-guide b
+  ) {
+  color: #e5e9f2;
+}
+html[data-page-theme="dark"]
+  :is(
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not(
+        [type="color"]
+      ),
+    .input-wrapper,
+    .install,
+    .secondary,
+    .inspector-tabs button,
+    .sample-choice,
+    .theme-toggle button
+  ) {
+  color: #d8e2f5;
+  background: #222c3c;
+  border-color: #3a4961;
+}
+html[data-page-theme="dark"]
+  :is(
+    .mode-option.chosen,
+    .icon-card.selected,
+    .sample-choice[aria-pressed="true"],
+    .theme-toggle button[aria-pressed="true"],
+    .inspector-tabs button[aria-selected="true"]
+  ) {
+  background: #273a60;
+  color: #bdcfff;
+  border-color: #87a8ff;
+}
+html[data-page-theme="dark"] :is(.primary) {
+  background: #426fe6;
+  color: #fff;
+}
+html[data-page-theme="dark"]
+  :is(
+    .inspector-reset,
+    .palette-copy,
+    .usage-guide a,
+    .download-single:hover,
+    .mode-option.chosen b
+  ) {
+  color: #9ab7ff;
+}
+html[data-page-theme="dark"] .icon-canvas {
+  background-image: radial-gradient(#42516a66 0.7px, transparent 0.7px);
+}
+html[data-page-theme="dark"] .selected-preview {
+  background-image: radial-gradient(#46516866 1px, transparent 1px);
+}
+html[data-page-theme="dark"] .theme-preview:not(.dark) {
+  background-color: #242c3b;
+}
+html[data-page-theme="dark"] .theme-preview.dark {
+  background-color: #0f172a;
+}
+html[data-page-theme="dark"] .stage-toolbar .section-label > span {
+  background: #28364c;
+  color: #b6c8e5;
+}
+html[data-page-theme="dark"] .brand-mark i {
+  background: #87a8ff;
+}
+html[data-page-theme="light"] {
+  color-scheme: light;
+}
+@media (max-width: 760px) {
+  .stage {
+    order: -1;
+  }
+  .intro {
+    padding-block: 28px;
+  }
+  .intro-aside {
+    width: auto;
+  }
+  .intro-promise {
+    display: none;
+  }
+  .support-note {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .header nav {
+    gap: 10px;
+  }
+  .header nav a:first-of-type {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+html[data-page-theme="dark"]
+  :is(
+    .animation-controls select,
+    .fill-animation pre,
+    .usage-guide code,
+    .preview-footnote code
+  ) {
+  background: #253146;
+  color: #d9e5fa;
+  border-color: #3a4961;
+}
+html[data-page-theme="dark"]
+  :is(.animation-tracks fieldset, .fill-animation details) {
+  border-color: #3a4961;
+}
+html[data-page-theme="dark"]
+  :is(
+    .download-single,
+    .animation-status,
+    .fill-animation summary,
+    .code-caption,
+    .code-caption span,
+    .export-file span,
+    .size-control
+  ) {
+  color: #b2c1d9;
+}
+@media (max-width: 760px) {
+  .workspace-body {
+    flex-direction: column;
+  }
+  .stage {
+    order: 0;
+  }
+  .settings {
+    order: 1;
+  }
+}
+@media (max-width: 420px) {
+  .header .version {
+    display: none;
+  }
+  .header {
+    gap: 12px;
+  }
+  .header nav {
+    gap: 8px;
+  }
+  .brand strong {
+    font-size: 21px;
+  }
+}

@@ -54,7 +54,7 @@ try {
   await poll(
     () =>
       page
-        .getByRole("button", { name: "Download bundle", exact: true })
+        .getByRole("button", { name: "Download React component", exact: true })
         .isEnabled(),
     "exporter ready",
   );
@@ -74,12 +74,11 @@ try {
         await page
           .locator(".icon-card.selected .icon-select > span")
           .textContent()
-      ).includes("sparkle"),
+      ).match(/^(sparkle|orbit)$/),
     "export artwork selected",
   );
-  await page
-    .getByRole("button", { name: "Generate editable variables", exact: true })
-    .click();
+  await page.getByRole("tab", { name: "Colors", exact: true }).click();
+  await page.getByRole("radio", { name: /Generate CSS variables/ }).check();
   await poll(
     () =>
       page
