@@ -229,12 +229,16 @@ export function reactSnippet(artifact, name, size = 24, preview = {}) {
   if (preview.rotation)
     wrapperStyle.transform = `rotate(${preview.rotation}deg)`;
   const wrapped = Object.keys(wrapperStyle).length
-    ? `    <span style={${JSON.stringify(wrapperStyle)}}>\n${icon.replace(/^/gm, "  ")}\n    </span>`
+    ? `    <span style={iconStyle} className="my-icon">\n${icon.replace(/^/gm, "  ")}\n    </span>`
     : icon;
   const body = artifact.cssFilename
     ? `    <>\n      {sprite.cssUrl && <link rel="stylesheet" href={sprite.cssUrl} />}\n${wrapped.replace(/^/gm, "  ")}\n    </>`
     : wrapped;
-  return `import { Icon } from 'tiny-isprite';\nimport sprite from './generated/sprite.js';\n\nexport function ExampleIcon() {\n  return (\n${body}\n  );\n}`;
+  const instructions = `// 1. Install tiny-isprite and copy public/ + src/generated/ from the bundle.\n// 2. Render <ExampleIcon /> in your app.\n// 3. Change color values in iconStyle below; keep the CSS-variable names.\n// The published Icon accepts className, not style: apply style to the wrapper.\n`;
+  const styleDeclaration = Object.keys(wrapperStyle).length
+    ? `const iconStyle = ${JSON.stringify(wrapperStyle, null, 2)};\n\n`
+    : "";
+  return `${instructions}import { Icon } from 'tiny-isprite';\nimport sprite from './generated/sprite.js';\n\n${styleDeclaration}export function ExampleIcon() {\n  return (\n${body}\n  );\n}`;
 }
 export function download(data, name, type) {
   const blob = new Blob([data], { type });

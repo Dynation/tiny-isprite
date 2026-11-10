@@ -281,6 +281,7 @@ try {
     .filter({ hasText: /^gradient$/ })
     .click();
   await singleReady();
+  await page.getByRole("tab", { name: "React component", exact: true }).click();
   const component = await page.locator("#code-output").textContent();
   assert.doesNotMatch(component, /tiny-isprite|sprite\.url|<symbol/);
   assert.match(component, /useId/);
@@ -414,8 +415,8 @@ try {
   assert.equal(await heartPicker.inputValue(), "#3b82f6");
   await page.getByRole("tab", { name: "React usage", exact: true }).click();
   const paletteSnippet = await page.locator("#code-output").textContent();
-  assert.match(paletteSnippet, /<span style=\{\{/);
-  assert.match(paletteSnippet, /"--heart-stroke-1":"#3b82f6"/);
+  assert.match(paletteSnippet, /<span style=\{iconStyle\}/);
+  assert.match(paletteSnippet, /"--heart-stroke-1": "#3b82f6"/);
   assert.doesNotMatch(paletteSnippet, /<Icon\s+style=/);
   await page.getByRole("tab", { name: "Tailwind", exact: true }).click();
   assert.match(
@@ -511,6 +512,56 @@ try {
   assert.match(
     renderToStaticMarkup(React.createElement(logoModule.exports.ExampleIcon)),
     /#8b5cf6/,
+  );
+  await page.getByRole("tab", { name: "React usage", exact: true }).click();
+  const usage = await page.locator("#code-output").textContent();
+  assert.match(usage, /style=\{iconColors\}/);
+  assert.match(usage, new RegExp(`from '\\./${logoName}\\.jsx'`));
+  // Run the actual copied usage file against the actual downloaded component.
+  const changedUsage = usage.replace("#8b5cf6", "#f97316");
+  const usageCompiled = transformSync(changedUsage, {
+    loader: "jsx",
+    jsx: "automatic",
+    format: "cjs",
+  }).code;
+  const usageModule = { exports: {} };
+  const requireUsage = (specifier) =>
+    specifier === `./${logoName}.jsx`
+      ? logoModule.exports
+      : createRequire(import.meta.url)(specifier);
+  new Function("module", "exports", "require", usageCompiled)(
+    usageModule,
+    usageModule.exports,
+    requireUsage,
+  );
+  const usageMarkup = renderToStaticMarkup(
+    React.createElement(usageModule.exports.default),
+  );
+  assert.match(usageMarkup, /width="512"/);
+  assert.match(usageMarkup, /#f97316/);
+  const overrideColor = await page.evaluate((markup) => {
+    const host = document.createElement("div");
+    host.innerHTML = markup;
+    document.body.appendChild(host);
+    const painted = [...host.querySelectorAll("*")].find((el) =>
+      (el.getAttribute("fill") || "").startsWith("var("),
+    );
+    const fill = getComputedStyle(painted).fill;
+    host.remove();
+    return fill;
+  }, usageMarkup);
+  assert.equal(overrideColor, "rgb(249, 115, 22)");
+  const exampleEvent = page.waitForEvent("download");
+  await page.getByRole("button", { name: /Download React usage/ }).click();
+  const exampleDownload = await exampleEvent;
+  assert.equal(exampleDownload.suggestedFilename(), `${logoName}-example.jsx`);
+  await exampleDownload.saveAs(path.join(artifacts, "logo-example.jsx"));
+  assert.equal(
+    await readFile(path.join(artifacts, "logo-example.jsx"), "utf8"),
+    usage,
+  );
+  console.log(
+    "PASS copied React usage compiles, imports its component, resizes proportionally and changes the actual rendered color through style overrides",
   );
   await page.screenshot({
     path: path.join(artifacts, "logo-editor.png"),

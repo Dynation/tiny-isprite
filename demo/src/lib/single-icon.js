@@ -96,6 +96,7 @@ export async function buildSingleIcon(icon, options, size = 24) {
   const component = `${ids.length ? '"use client";\n\nimport { useId } from "react";\n\n' : ""}export function ExampleIcon(props) {\n${ids.length ? "  const iconId = useId();\n" : ""}  return (\n${jsx(root)}\n  );\n}\n`;
   return {
     height,
+    aspectRatio: viewBox[3] / viewBox[2],
     svg: new XMLSerializer().serializeToString(root),
     component,
     filename: `${icon.name}.svg`,

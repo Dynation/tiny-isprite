@@ -1530,3 +1530,44 @@ footer > a:last-child span {
 .single-gallery .icon-select {
   min-height: 72px;
 }
+.usage-guide {
+  border: 1px solid #e1e5db;
+  border-radius: 12px;
+  background: #fff;
+  padding: 24px 28px;
+  margin: 28px 0 18px;
+}
+.usage-guide h3 {
+  font-size: 17px;
+  margin: 0 0 14px;
+}
+.usage-guide ol {
+  padding-left: 20px;
+  margin: 0;
+  display: grid;
+  gap: 12px;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.usage-guide p {
+  font-size: 12px;
+  line-height: 1.8;
+  color: #697761;
+  margin: 15px 0 0;
+}
+.usage-guide code {
+  font-size: 11px;
+  background: #f2f4ee;
+  padding: 2px 4px;
+  border-radius: 3px;
+  overflow-wrap: anywhere;
+}
+.usage-guide .palette-copy {
+  margin-top: 14px;
+  padding-bottom: 0;
+}
+@media (max-width: 720px) {
+  .usage-guide {
+    padding: 20px 16px;
+  }
+}

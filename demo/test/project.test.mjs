@@ -90,7 +90,10 @@ test("editable palettes expose currentColor strokes and bake independent overrid
   });
   assert.equal(recreated.sprite, artifact.sprite);
   assert.equal(recreated.css, artifact.css);
-  assert.match(strFromU8(exported["Icon-example.jsx"]), /<span style=\{\{/);
+  assert.match(
+    strFromU8(exported["Icon-example.jsx"]),
+    /<span style=\{iconStyle\}/,
+  );
   assert.match(strFromU8(exported["Icon-example.jsx"]), /--heart-stroke-1/);
 });
 
@@ -127,4 +130,27 @@ test("multicolor palette and stroke edits preserve regeneration and reject CSS i
   });
   assert.equal(recreated.sprite, artifact.sprite);
   assert.equal(recreated.css, artifact.css);
+});
+
+test("single usage explains import, real variable overrides and proportional resizing", async () => {
+  const { singleUsageSnippet } = await import("../src/lib/usage.js");
+  const snippet = singleUsageSnippet(
+    { aspectRatio: 0.3 },
+    "logo",
+    [{ name: "--logo-fill-1", value: "#123456", property: "fill 1" }],
+    "#245cf3",
+    512,
+  );
+  assert.match(snippet, /import \{ ExampleIcon \} from '\.\/logo\.jsx'/);
+  assert.match(snippet, /"--logo-fill-1": "#123456"/);
+  assert.match(snippet, /style=\{iconColors\}/);
+  assert.match(snippet, /height=\{width \* 0\.3\}/);
+  const plain = singleUsageSnippet(
+    { aspectRatio: 1 },
+    "plain",
+    [],
+    "#245cf3",
+    24,
+  );
+  assert.doesNotMatch(plain, /iconColors|style=\{/);
 });

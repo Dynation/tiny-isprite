@@ -67,3 +67,23 @@ HTML document, namespace their IDs or use the generated React component.
 Optional local regression fixtures can be supplied with PLAYGROUND_LOGO (a
 multicolor, 400-unit wide logo) and PLAYGROUND_ARTWORK (the 2400×1352 monochrome
 artwork used in manual QA). Personal source files are not committed or uploaded.
+
+## Applying colors in React
+
+In Single mode, React usage is shown first. Download the component as the exact
+filename in the import, then copy/download the separate usage file beside it.
+Render its default IconExample in the consuming app. Keep the quoted variable
+names in iconColors, change their color values, and pass style={iconColors}
+directly to the standalone ExampleIcon. Its generated paint fallbacks remain
+editable without modifying paths. The example computes height from width and the
+source aspect ratio. color only affects currentColor paints.
+
+For the published tiny-isprite Icon, the React example instead uses an iconStyle
+object on a span wrapper, because Icon 2.1.0 does not accept a style prop. The
+wrapper passes custom properties to the SVG. With a downloaded CSS file, import
+it, keep className="my-icon" on that wrapper (or standalone component), and remove
+inline variable overrides so the class can apply.
+
+The browser regression compiles the actual generated usage file, resolves its
+component import, replaces a color value and verifies the rendered SVG's computed
+fill changes to that value.

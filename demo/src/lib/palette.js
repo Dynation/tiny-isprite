@@ -70,7 +70,7 @@ export function iconVariables(css, name, allColors = false) {
 }
 export function variableCss(variables) {
   return variables.length
-    ? `/* Apply to a wrapper around your icon. */\n.my-icon {\n${variables.map((v) => `  ${v.name}: ${v.value};`).join("\n")}\n}`
+    ? `/* Import this CSS, then use className="my-icon" on a wrapper\n   around <Icon>, or directly on the standalone <ExampleIcon>.\n   Keep variable names; replace the color values on the right.\n   Remove inline variable overrides from style so this class can apply. */\n.my-icon {\n${variables.map((v) => `  ${v.name}: ${v.value};`).join("\n")}\n}`
     : "/* Select Generate CSS variables to create an editable palette. */";
 }
 export function colorHex(value, fallback = "#245cf3") {

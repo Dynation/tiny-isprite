@@ -17,6 +17,7 @@ import {
 } from "./lib/project.js";
 import { buildSingleIcon } from "./lib/single-icon.js";
 import { iconVariables, variableCss, colorHex } from "./lib/palette.js";
+import { singleUsageSnippet } from "./lib/usage.js";
 import "./style.css";
 
 const github = "https://github.com/Dynation/tiny-isprite";
@@ -167,6 +168,16 @@ function App() {
     value: options.palette[current?.name]?.[variable.name] || variable.value,
   }));
   const paletteCode = variableCss(variables);
+  const usageCode =
+    single && artifact?.single && current
+      ? singleUsageSnippet(
+          artifact.single,
+          current.name,
+          variables,
+          color,
+          size,
+        )
+      : snippet;
   const tailwindClasses = [
     "inline-flex",
     `text-[${color}]`,
@@ -177,17 +188,20 @@ function App() {
     ? `// In a project with Tailwind CSS installed.\n// Import the component downloaded from this playground.\nimport { ExampleIcon } from './${current?.name || "icon"}.jsx';\n\nexport function StyledIcon() {\n  return <ExampleIcon className=${JSON.stringify(tailwindClasses)} aria-label="Your icon" />;\n}`
     : `// In a project with Tailwind CSS installed.\nimport { Icon } from 'tiny-isprite';\nimport sprite from './generated/sprite.js';\n\nexport function StyledIcon() {\n  return (\n    <>\n      {sprite.cssUrl && <link rel="stylesheet" href={sprite.cssUrl} />}\n      <span className=${JSON.stringify(tailwindClasses)}>\n        <Icon name=${JSON.stringify(current?.name || "icon")} spriteUrl={sprite.url} prefix={sprite.prefix} size={${size}} />\n      </span>\n    </>\n  );\n}`;
   const code =
-    tab === "css"
-      ? paletteCode
-      : tab === "tailwind"
-        ? tailwindCode
-        : tab === "react"
-          ? snippet
-          : tab === "sprite"
-            ? (single ? artifact?.single?.svg : artifact?.sprite) || ""
-            : artifact?.module || "";
+    tab === "usage"
+      ? usageCode
+      : tab === "css"
+        ? paletteCode
+        : tab === "tailwind"
+          ? tailwindCode
+          : tab === "react"
+            ? snippet
+            : tab === "sprite"
+              ? (single ? artifact?.single?.svg : artifact?.sprite) || ""
+              : artifact?.module || "";
   const tabs = single
     ? [
+        ["usage", "React usage"],
         ["react", "React component"],
         ["tailwind", "Tailwind"],
         ["css", "CSS variables"],
@@ -583,7 +597,7 @@ function App() {
                         setTarget(value);
                         if (value === "sprite")
                           setSize((previous) => Math.min(previous, 64));
-                        setTab("react");
+                        setTab(value === "single" ? "usage" : "react");
                       }}
                     />
                     <b>{label}</b>
@@ -885,6 +899,98 @@ function App() {
           </div>
         )}
         {artifact?.css && <style>{artifact.css}</style>}
+        <section className="usage-guide" aria-label="How to apply your changes">
+          <h3>Use your changes in React</h3>
+          {single ? (
+            <ol>
+              <li>
+                <b>Save the component.</b> Download React component as{" "}
+                <code>{current?.name || "icon"}.jsx</code>.
+              </li>
+              <li>
+                <b>Open React usage.</b> Copy the example into another file
+                beside it, then render <code>&lt;IconExample /&gt;</code>.
+              </li>
+              {variables.length ? (
+                <li>
+                  <b>Replace color values.</b> In <code>iconColors</code>, keep
+                  each <code>--variable-name</code> and change its HEX value.
+                  Pass that object as <code>style</code> to{" "}
+                  <code>&lt;ExampleIcon&gt;</code>. No extra CSS import is
+                  required.
+                </li>
+              ) : (
+                <li>
+                  <b>Change the color prop.</b> It changes paints that use{" "}
+                  <code>currentColor</code>. For individually editable colors,
+                  choose <b>Generate CSS variables</b> first; original fixed
+                  fills keep their colors.
+                </li>
+              )}
+            </ol>
+          ) : (
+            <ol>
+              <li>
+                <b>Download the bundle.</b> Install <code>tiny-isprite</code>;
+                copy <code>public/</code> and <code>src/generated/</code> into
+                your app.
+              </li>
+              <li>
+                <b>Copy React usage.</b> Render{" "}
+                <code>&lt;ExampleIcon /&gt;</code>. It loads the generated
+                stylesheet and manifest.
+              </li>
+              <li>
+                <b>Replace color values.</b>{" "}
+                {variables.length ? (
+                  <>
+                    Keep variable names in <code>iconStyle</code> and edit the
+                    values.
+                  </>
+                ) : (
+                  <>
+                    Change <code>color</code> in <code>iconStyle</code> for{" "}
+                    <code>currentColor</code> paints; generate CSS variables for
+                    individual colors.
+                  </>
+                )}{" "}
+                Style goes on the <code>&lt;span&gt;</code> wrapper because the
+                published <code>Icon</code> has no <code>style</code> prop.
+              </li>
+            </ol>
+          )}
+          <p>
+            <code>color</code> only affects <code>currentColor</code> paints.
+            CSS-variable colors are overridden through <code>style</code> or a
+            CSS class.{" "}
+            {single ? (
+              <>
+                Change <code>width</code> in the usage example; the calculated
+                height keeps your image’s proportions. <code>className</code>{" "}
+                accepts your own CSS or Tailwind classes.
+              </>
+            ) : (
+              <>
+                Use <code>size</code> for dimensions and <code>className</code>{" "}
+                for CSS or Tailwind classes.
+              </>
+            )}
+          </p>
+          {variables.length > 0 && (
+            <p>
+              Prefer a CSS file? Import the downloaded CSS, use{" "}
+              <code>className="my-icon"</code>{" "}
+              {single ? "on ExampleIcon" : "on the span wrapper"}, and remove
+              the inline variable values from <code>style</code>. Inline styles
+              take priority over class rules.
+            </p>
+          )}
+          {single && (
+            <button className="palette-copy" onClick={() => setTab("usage")}>
+              Show React usage example
+            </button>
+          )}
+        </section>
         <section className="output-section">
           <div className="code-panel">
             <div className="code-toolbar">
@@ -992,6 +1098,21 @@ function App() {
               {single ? "Download standalone SVG" : "Just the SVG sprite"}{" "}
               <span>↓</span>
             </button>
+            {single && (
+              <button
+                className="download-single"
+                disabled={!ready}
+                onClick={() =>
+                  download(
+                    usageCode,
+                    `${current.name}-example.jsx`,
+                    "text/javascript",
+                  )
+                }
+              >
+                Download React usage <span aria-hidden="true">↓</span>
+              </button>
+            )}
             {options.mode === "variables" && (
               <button
                 className="download-single"
