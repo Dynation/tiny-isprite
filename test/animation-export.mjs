@@ -21,7 +21,7 @@ await mkdir(site);
 let server, browser, consumer;
 try {
   const port = await freePort(),
-    url = `http://127.0.0.1:${port}`;
+    url = `http://127.0.0.1:${port}${process.env.VITE_BASE_PATH || "/"}`;
   server = spawn(
     process.execPath,
     [
@@ -54,7 +54,7 @@ try {
   await poll(
     () =>
       page
-        .getByRole("button", { name: "Download bundle", exact: true })
+        .getByRole("button", { name: "Download React component", exact: true })
         .isEnabled(),
     "exporter ready",
   );
@@ -74,12 +74,11 @@ try {
         await page
           .locator(".icon-card.selected .icon-select > span")
           .textContent()
-      ).includes("sparkle"),
+      ).match(/^(sparkle|orbit)$/),
     "export artwork selected",
   );
-  await page
-    .getByRole("button", { name: "Generate editable variables", exact: true })
-    .click();
+  await page.getByRole("tab", { name: "Colors", exact: true }).click();
+  await page.getByRole("radio", { name: /Generate CSS variables/ }).check();
   await poll(
     () =>
       page
@@ -144,6 +143,23 @@ try {
     /· (\d+) \/ (\d+)/,
   );
   assert.ok(stats);
+  await page.evaluate(() => {
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: {
+      writeText: async (text) => { window.copiedAnimationPrompt = text; },
+    } });
+  });
+  await page.getByRole("button", { name: "Copy AI prompt", exact: true }).click();
+  const copiedPrompt = await page.evaluate(() => window.copiedAnimationPrompt);
+  assert.match(copiedPrompt, /text only/);
+  assert.match(copiedPrompt, /local path/);
+  await page.evaluate(() => {
+    navigator.clipboard.writeText = async () => { throw new Error("denied"); };
+  });
+  await page.getByRole("button", { name: "Copy AI prompt", exact: true }).click();
+  const manualPrompt = page.getByRole("textbox", { name: "AI integration prompt" });
+  await manualPrompt.waitFor({ state: "visible" });
+  assert.equal(await manualPrompt.inputValue(), copiedPrompt);
+  assert.match(await page.locator(".animation-integration").textContent(), /Clipboard unavailable/);
   const event = page.waitForEvent("download");
   await page
     .getByRole("button", { name: "Export animation ZIP", exact: true })
@@ -156,6 +172,12 @@ try {
     assert.ok(!name.includes(".."));
     await writeFile(path.join(site, name), bytes);
   }
+  assert.equal(new TextDecoder().decode(files["AI-PROMPT.txt"]), copiedPrompt);
+  const readme = new TextDecoder().decode(files["README.md"]);
+  const htmlExample = readme.match(/```html\n([\s\S]*?)```/)[1];
+  await writeFile(path.join(site, "readme-example.html"), htmlExample.replace(
+    "player.replay();", "player.replay(); window.readmePlayer = player;",
+  ));
   const exported = (
     await import(
       "file://" + path.join(site, "animation-data.js") + "?v=" + Date.now()
@@ -196,6 +218,17 @@ try {
   });
   await new Promise((resolve) => consumer.listen(0, "127.0.0.1", resolve));
   const consumerUrl = `http://127.0.0.1:${consumer.address().port}`;
+  const readmePage = await browser.newPage();
+  const readmeErrors = [];
+  readmePage.on("pageerror", (error) => readmeErrors.push(error.message));
+  await readmePage.goto(`${consumerUrl}/readme-example.html`);
+  await readmePage.locator("#icon svg").waitFor();
+  await readmePage.waitForFunction(() => document.querySelector("#icon svg").getBoundingClientRect().width > 0);
+  await readmePage.waitForFunction(() => window.readmePlayer.getState().progress > 0);
+  assert.equal(await readmePage.evaluate(() => window.readmePlayer.getState().destroyed), false);
+  assert.deepEqual(readmeErrors, []);
+  await readmePage.close();
+  console.log("PASS copied AI prompt, clipboard-denied manual fallback, ZIP prompt parity and executable README HTML example");
   const consumerContext = await browser.newContext({
     viewport: { width: 1280, height: 1000 },
   });
@@ -354,6 +387,24 @@ try {
   assert.equal(cleanup.override, "#22c55e");
   assert.notEqual(cleanup.restored, "#22c55e");
   assert.equal(cleanup.placeholder, "original placeholder");
+  // Compile and render the exact README React example with only its import path adjusted.
+  const readmeReact = readme.match(/```jsx\n([\s\S]*?)```/)[1]
+    .replace("./components/animation/AnimatedIcon.jsx", "./AnimatedIcon.jsx");
+  await writeFile(path.join(site, "readme-react-entry.jsx"),
+    "import React from 'react'; import { createRoot } from 'react-dom/client';\n" +
+    readmeReact + "\ncreateRoot(document.getElementById('root')).render(<Example />);");
+  await build({
+    entryPoints: [path.join(site, "readme-react-entry.jsx")], bundle: true,
+    format: "esm", platform: "browser", outfile: path.join(site, "readme-react.js"),
+    nodePaths: [path.join(repo, "node_modules")], jsx: "automatic", logLevel: "silent",
+  });
+  await writeFile(path.join(site, "readme-react.html"),
+    '<!doctype html><div id="root"></div><script type="module" src="./readme-react.js"></script>');
+  const readmeReactPage = await consumerContext.newPage();
+  readmeReactPage.on("pageerror", (error) => errors.push(error.message));
+  await readmeReactPage.goto(consumerUrl + "/readme-react.html");
+  await readmeReactPage.locator("#root svg").waitFor();
+  await readmeReactPage.close();
   // Build a separate React consumer from only the exported files + React itself.
   const reactEntry = `import React,{useState} from 'react';import{createRoot}from'react-dom/client';import{AnimatedIcon}from'./AnimatedIcon.jsx';window.reactPlayers={};function App(){const[p,setP]=useState(100),[theme,setTheme]=useState('light'),[mounted,setMounted]=useState(true);return <><button onClick={()=>setP(45)}>Seek React</button><button onClick={()=>setTheme(t=>t==='light'?'dark':'light')}>Theme React</button><button onClick={()=>setMounted(false)}>Unmount React</button>{mounted&&['a','b','c'].map(id=><AnimatedIcon key={id} width={180} progress={p} theme={theme} onReady={player=>{window.reactPlayers[id]=player}} label={id}/>)}</>}createRoot(document.getElementById('root')).render(<React.StrictMode><App/></React.StrictMode>);`;
   await writeFile(path.join(site, "react-consumer-entry.jsx"), reactEntry);

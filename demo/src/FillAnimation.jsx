@@ -1,3 +1,4 @@
+import { animationAiPrompt } from "./lib/animation-guide.js";
 import React, { useEffect, useRef, useState } from "react";
 import {
   prepareFillField,
@@ -20,11 +21,12 @@ export function FillAnimation({
   targetRef,
   aspectRatio,
   active = true,
+  initiallyEnabled = false,
   name = "icon",
   palettes = { light: {}, dark: {} },
   defaultTheme = "light",
 }) {
-  const [enabled, setEnabled] = useState(false);
+  const [enabled, setEnabled] = useState(initiallyEnabled);
   const [mode, setMode] = useState("flow");
   const [x, setX] = useState(50),
     [y, setY] = useState(50);
@@ -33,6 +35,8 @@ export function FillAnimation({
   const [prepared, setPrepared] = useState(null);
   const [viewportRatio, setViewportRatio] = useState(aspectRatio);
   const [error, setError] = useState("");
+  const [copyNotice, setCopyNotice] = useState("");
+  const [showGuide, setShowGuide] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [exportNotice, setExportNotice] = useState("");
   const [playing, setPlaying] = useState(false);
@@ -47,7 +51,7 @@ export function FillAnimation({
     : [{ name: "all-paint", property: "All visible paint" }];
   const tracks = groups.map((group, index) => ({
     name: group.name,
-    start: 0,
+    start: initiallyEnabled ? Number((index * 0.18).toFixed(2)) : 0,
     duration: 1.8,
     end: 100,
     ...settings[group.name],
@@ -204,6 +208,15 @@ export function FillAnimation({
       [name]: { ...previous[name], [key]: value },
     }));
   }
+  async function copyAiPrompt() {
+    try {
+      await navigator.clipboard.writeText(animationAiPrompt);
+      setCopyNotice("Prompt copied. Attach the ZIP to your chat, or give your coding agent the extracted folder path.");
+    } catch {
+      setShowGuide(true);
+      setCopyNotice("Clipboard unavailable. Select and copy the prompt below manually.");
+    }
+  }
   async function exportAnimation() {
     if (!prepared || exporting) return;
     stop();
@@ -291,6 +304,29 @@ export function FillAnimation({
             >
               {exporting ? "Preparing animation ZIP…" : "Export animation ZIP"}
             </button>
+          </div>
+          <div className="animation-integration">
+            <button type="button" className="button secondary" onClick={copyAiPrompt}>
+              Copy AI prompt
+            </button>
+            <p>Copies text only. Download the animation ZIP and attach it to your chat,
+              or give your coding agent the path to the extracted folder. Files are not sent automatically.</p>
+            {copyNotice && <p role="status">{copyNotice}</p>}
+            <details open={showGuide} onToggle={(event) => setShowGuide(event.currentTarget.open)}>
+              <summary>How to use your animation ZIP</summary>
+              <ol>
+                <li>Export and extract the animation ZIP. Open README.md for the full guide.</li>
+                <li>Try the demo: in the extracted folder, run <code>python3 -m http.server 8080</code> if Python is installed, then open http://localhost:8080 and click Replay. Use HTTP, not a double-click on index.html.</li>
+                <li>HTML: copy <code>player.js</code> and <code>animation-data.js</code>, then use the complete HTML example in README.md.</li>
+                <li>React: also copy <code>AnimatedIcon.jsx</code> beside those files and render it with <code>autoPlay</code> to start. It defaults to false. See <code>react-example.jsx</code> for manual controls.</li>
+              </ol>
+              <p>No tiny-isprite install is needed. Regular SVG/React downloads and artwork.svg are static. Reduced motion is respected.</p>
+              <label>
+                AI integration prompt
+                <textarea readOnly rows={10} value={animationAiPrompt}
+                  onFocus={(event) => event.currentTarget.select()} />
+              </label>
+            </details>
           </div>
           <div className="animation-status" role="status">
             {error ||

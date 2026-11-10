@@ -1,5 +1,26 @@
 <!doctype html>
-<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
-<meta name="description" content="Build an SVG sprite, preview it in React, and export content-hashed assets. A browser-only playground for tiny-isprite."/>
-<meta name="theme-color" content="#f6f6f3"/><title>tiny-isprite — Sprite playground</title>
-<link rel="icon" type="image/svg+xml" href="/favicon.svg"/></head><body><div id="root"></div><script type="module" src="/src/main.jsx"></script></body></html>
+<html lang="en" data-page-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta
+      name="description"
+      content="Recolor SVGs, explore fill animations, and export standalone SVGs, React components or sprites. Free, browser-only tools by Dynation."
+    />
+    <meta name="theme-color" content="#11151d" />
+    <title>tiny-isprite — SVG color & motion lab</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <script>
+      try {
+        document.documentElement.dataset.pageTheme =
+          localStorage.getItem("isprite-page-theme") === "light"
+            ? "light"
+            : "dark";
+      } catch {}
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

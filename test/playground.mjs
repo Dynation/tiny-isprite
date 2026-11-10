@@ -45,7 +45,7 @@ try {
     server.stderr.on("data", (data) => {
       serverLog += data;
     });
-    url = `http://127.0.0.1:${port}`;
+    url = `http://127.0.0.1:${port}${process.env.VITE_BASE_PATH || "/"}`;
     await poll(async () => {
       try {
         return (await fetch(url)).ok;
@@ -73,6 +73,124 @@ try {
     await dialog.dismiss();
   });
   await page.goto(url);
+  assert.equal(
+    new URL(
+      await page
+        .getByRole("link", { name: "tiny-isprite home" })
+        .getAttribute("href"),
+      url,
+    ).pathname,
+    process.env.VITE_BASE_PATH || "/",
+  );
+  const favicon = await page.locator('link[rel="icon"]').getAttribute("href");
+  assert.equal(
+    (await page.request.get(new URL(favicon, url).href)).status(),
+    200,
+  );
+  await page
+    .getByRole("button", { name: "Download React component", exact: true })
+    .waitFor();
+  assert.equal(
+    await page
+      .getByRole("radio", { name: "Single icon", exact: true })
+      .isChecked(),
+    true,
+  );
+  assert.equal(
+    await page
+      .getByRole("radio", { name: /Generate CSS variables/ })
+      .isChecked(),
+    true,
+  );
+  assert.equal(
+    await page
+      .getByRole("checkbox", { name: "Include multicolor fills and strokes" })
+      .isChecked(),
+    true,
+  );
+  assert.equal(
+    await page
+      .getByRole("button", { name: "Dark page theme" })
+      .getAttribute("aria-pressed"),
+    "true",
+  );
+  assert.equal(await page.locator(".icon-library").getAttribute("open"), null);
+  await poll(
+    () =>
+      page.getByRole("button", { name: "Play fill", exact: true }).isEnabled(),
+    "featured flow field",
+  );
+  assert.ok((await page.locator(".animation-tracks fieldset").count()) >= 3);
+  await page.screenshot({
+    path: path.join(artifacts, "launch-dark.png"),
+    fullPage: true,
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  assert.equal(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth > innerWidth,
+    ),
+    false,
+  );
+  assert.ok(
+    await page
+      .locator(".stage")
+      .evaluate(
+        (el) =>
+          el.getBoundingClientRect().top <
+          document.querySelector(".settings").getBoundingClientRect().top,
+      ),
+  );
+  await page.screenshot({
+    path: path.join(artifacts, "launch-mobile-dark.png"),
+    fullPage: true,
+  });
+  await page.setViewportSize({ width: 1440, height: 1080 });
+  await page.getByRole("button", { name: "Dark page theme" }).click();
+  await page.reload();
+  assert.equal(
+    await page
+      .getByRole("button", { name: "Dark page theme" })
+      .getAttribute("aria-pressed"),
+    "false",
+  );
+  await page.getByRole("button", { name: "Dark page theme" }).click();
+  await page.reload();
+  assert.equal(
+    await page
+      .getByRole("button", { name: "Dark page theme" })
+      .getAttribute("aria-pressed"),
+    "true",
+  );
+  assert.equal(await page.locator(".icon-inspector h3").textContent(), "orbit");
+  await page.getByRole("tab", { name: "Colors", exact: true }).click();
+  await poll(
+    () =>
+      page
+        .locator('.variable-picker input[aria-label^="Color "]')
+        .count()
+        .then((c) => c >= 3),
+    "featured palette",
+  );
+  await page.getByRole("button", { name: "Bloom", exact: true }).click();
+  await poll(
+    () =>
+      page
+        .locator(".icon-inspector h3")
+        .textContent()
+        .then((n) => n === "bloom"),
+    "featured artwork choice",
+  );
+  await page.getByRole("button", { name: "Orbit", exact: true }).click();
+  console.log(
+    "PASS multicolor featured artwork, enabled flow controls, collapsed library, default variable generation and persisted dark page theme",
+  );
+  await page.getByRole("radio", { name: "Sprite", exact: true }).check();
+  await page
+    .getByRole("checkbox", { name: "Include multicolor fills and strokes" })
+    .uncheck();
+  await page.getByRole("radio", { name: /Use currentColor/ }).check();
+  await page.locator(".icon-library summary").click();
   const exportButton = page.getByRole("button", {
     name: "Download bundle",
     exact: true,
@@ -80,14 +198,14 @@ try {
   const ready = () =>
     poll(() => exportButton.isEnabled(), "generated artifact");
   await ready();
-  assert.equal(await page.locator(".icon-card").count(), 12);
+  assert.equal(await page.locator(".icon-card").count(), 15);
   await page.waitForFunction(() =>
     [...document.querySelectorAll(".icon-card use")].every(
       (element) => element.getBBox().width > 0,
     ),
   );
   console.log(
-    "PASS actual React component renders all twelve external SVG symbols",
+    "PASS actual React component renders all fifteen external SVG symbols",
   );
   await page.getByRole("textbox", { name: "Search icons" }).fill("heart");
   assert.equal(await page.locator(".icon-card").count(), 1);
@@ -100,7 +218,7 @@ try {
   await ready();
   assert.match(
     await page.locator(".icon-card use").first().getAttribute("href"),
-    /#demo-arrow-up-right$/,
+    /#demo-orbit$/,
   );
   assert.notEqual(
     await page.locator(".icon-card use").first().getAttribute("href"),
@@ -147,7 +265,7 @@ try {
   ]);
   await ready();
   await poll(
-    async () => (await page.locator(".icon-card").count()) === 14,
+    async () => (await page.locator(".icon-card").count()) === 17,
     "SVG uploads",
   );
   await page.getByLabel("Upload SVG files", { exact: true }).setInputFiles({
@@ -159,7 +277,7 @@ try {
   });
   await ready();
   await poll(
-    async () => (await page.locator(".icon-card").count()) === 15,
+    async () => (await page.locator(".icon-card").count()) === 18,
     "duplicate name upload",
   );
   assert.ok(
@@ -177,7 +295,7 @@ try {
       (await page.locator(".notice").textContent()).includes("Not a valid SVG"),
     "invalid SVG rejection",
   );
-  assert.equal(await page.locator(".icon-card").count(), 15);
+  assert.equal(await page.locator(".icon-card").count(), 18);
   const transfer = await page.evaluateHandle(() => {
     const data = new DataTransfer();
     data.items.add(
@@ -193,7 +311,7 @@ try {
     .locator(".icon-canvas")
     .dispatchEvent("drop", { dataTransfer: transfer });
   await poll(
-    async () => (await page.locator(".icon-card").count()) === 16,
+    async () => (await page.locator(".icon-card").count()) === 19,
     "drag and drop upload",
   );
   await ready();
@@ -903,7 +1021,7 @@ try {
     .fill("25");
   await poll(() => playFill.isEnabled(), "new inlet prepared");
   await animationProgress.fill("45");
-  await page.locator(".fill-animation summary").click();
+  await page.getByText("CSS-only radial example", { exact: true }).click();
   const animationCssEvent = page.waitForEvent("download");
   await page
     .getByRole("button", { name: "Download radial animation CSS", exact: true })
@@ -1104,7 +1222,7 @@ try {
   assert.equal(await exportButton.isEnabled(), false);
   await page.getByRole("button", { name: "Load samples", exact: true }).click();
   await ready();
-  assert.equal(await page.locator(".icon-card").count(), 12);
+  assert.equal(await page.locator(".icon-card").count(), 15);
   console.log(
     "PASS invalid options cannot export stale artifacts; empty-state and sample recovery",
   );
