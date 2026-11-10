@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Portable motion — independent export test</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font:
+          16px/1.6 system-ui,
+          sans-serif;
+        background: #f5f5f0;
+        color: #1b2330;
+      }
+      body > header,
+      main,
+      footer {
+        width: min(1100px, calc(100% - 40px));
+        margin: auto;
+      }
+      header {
+        display: flex;
+        justify-content: space-between;
+        gap: 20px;
+        align-items: center;
+        padding: 24px 0;
+        border-bottom: 1px solid #d9dfd5;
+      }
+      .brand {
+        font-weight: 700;
+        letter-spacing: -0.04em;
+        font-size: 23px;
+      }
+      .brand span {
+        color: #245cf3;
+      }
+      .eyebrow {
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: #647064;
+      }
+      .hero {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 48px;
+        align-items: center;
+        padding: 64px 0 36px;
+      }
+      h1 {
+        font-size: clamp(36px, 5vw, 64px);
+        line-height: 1.05;
+        letter-spacing: -0.06em;
+        margin: 10px 0 20px;
+      }
+      p {
+        color: #647064;
+        margin: 12px 0;
+      }
+      .art {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 300px;
+        background: #fff;
+        border-radius: 20px;
+        padding: 32px;
+        overflow: hidden;
+      }
+      .motion-host {
+        width: 100%;
+      }
+      button {
+        font: inherit;
+        border: 1px solid #d4dbd0;
+        background: #fff;
+        color: inherit;
+        border-radius: 8px;
+        padding: 9px 15px;
+        cursor: pointer;
+      }
+      button.primary {
+        background: #245cf3;
+        color: white;
+        border-color: #245cf3;
+      }
+      button:focus-visible,
+      input:focus-visible {
+        outline: 3px solid #70a2ff;
+        outline-offset: 3px;
+      }
+      .controls {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        align-items: center;
+        padding: 24px 0;
+      }
+      .timeline {
+        flex: 1 1 260px;
+      }
+      .timeline label {
+        display: flex;
+        justify-content: space-between;
+        font-size: 13px;
+      }
+      input[type="range"] {
+        width: 100%;
+        accent-color: #245cf3;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 22px;
+        margin: 24px 0 60px;
+      }
+      .card {
+        background: #fff;
+        border-radius: 15px;
+        padding: 28px;
+      }
+      .small-art {
+        width: 150px;
+        min-height: 90px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .inline-icon {
+        display: inline-block;
+        width: 42px;
+        vertical-align: middle;
+        margin-right: 12px;
+      }
+      .status {
+        font-size: 12px;
+        color: #647064;
+        overflow-wrap: anywhere;
+      }
+      h2 {
+        font-size: 22px;
+        margin: 20px 0 8px;
+      }
+      .cta {
+        display: flex;
+        align-items: center;
+      }
+      footer {
+        border-top: 1px solid #d9dfd5;
+        padding: 22px 0;
+        font-size: 12px;
+        color: #647064;
+      }
+      [data-theme="dark"] body {
+        background: #101726;
+        color: #e9efff;
+      }
+      [data-theme="dark"] .art,
+      [data-theme="dark"] .card,
+      [data-theme="dark"] button:not(.primary) {
+        background: #1c2739;
+        border-color: #3b485c;
+      }
+      [data-theme="dark"] p,
+      [data-theme="dark"] .status,
+      [data-theme="dark"] .eyebrow,
+      [data-theme="dark"] footer {
+        color: #bac6da;
+      }
+      [data-theme="dark"] header,
+      [data-theme="dark"] footer {
+        border-color: #3b485c;
+      }
+      @media (max-width: 700px) {
+        .hero,
+        .grid {
+          grid-template-columns: 1fr;
+          gap: 22px;
+        }
+        .hero {
+          padding-top: 32px;
+        }
+        .art {
+          min-height: 230px;
+          padding: 22px;
+        }
+        header {
+          flex-wrap: wrap;
+        }
+        body > header,
+        main,
+        footer {
+          width: calc(100% - 28px);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="brand">Portable<span> motion.</span></div>
+      <button id="theme">Switch theme</button>
+    </header>
+    <main>
+      <section class="hero">
+        <div>
+          <div class="eyebrow">Independent animation export</div>
+          <h1>Your artwork.<br />Your motion.<br />Anywhere.</h1>
+          <p>
+            This page uses only the downloaded animation files. It runs without
+            the playground, an account, a CDN or an animation server.
+          </p>
+          <button class="primary" id="replay">Replay animation</button>
+        </div>
+        <div class="art"><div class="motion-host" id="hero-art"></div></div>
+      </section>
+      <section class="controls" aria-label="Animation playback">
+        <button id="play">Play</button><button id="pause">Pause</button>
+        <div class="timeline">
+          <label for="progress"
+            >Complete timeline <output id="value">100%</output></label
+          ><input
+            id="progress"
+            type="range"
+            min="0"
+            max="100"
+            value="100"
+            aria-label="Exported animation progress"
+          />
+        </div>
+      </section>
+      <div class="status" id="status" role="status">
+        Loading local animation files…
+      </div>
+      <section class="grid">
+        <article class="card">
+          <div class="small-art">
+            <div class="motion-host" id="card-art"></div>
+          </div>
+          <h2>Same data, another instance.</h2>
+          <p>
+            Each player has independent playback and its own SVG IDs. Resizing
+            the page keeps the original image proportions.
+          </p>
+        </article>
+        <article class="card">
+          <h2>Fits into real interface elements.</h2>
+          <p>
+            The same exported artwork can appear inside a button, a feature card
+            or a hero.
+          </p>
+          <button class="cta" id="inline-replay">
+            <span class="inline-icon motion-host" id="inline-art"></span>Replay
+            this icon
+          </button>
+        </article>
+      </section>
+    </main>
+    <footer>
+      Standalone consumer example · prepared maps and timing · SVG remains
+      vector artwork
+    </footer>
+    <script type="module">
+      import animation from "./animation-data.js";
+      import { createAnimation } from "./player.js";
+      const players = ["hero-art", "card-art", "inline-art"].map((id) =>
+        createAnimation(document.getElementById(id), animation, {
+          initialProgress: 100,
+        }),
+      );
+      window.animationDemo = { players, animation };
+      const slider = document.getElementById("progress"),
+        value = document.getElementById("value"),
+        status = document.getElementById("status");
+      let dark = animation.defaultTheme === "dark";
+      function theme() {
+        document.documentElement.dataset.theme = dark ? "dark" : "light";
+        players.forEach((p) => p.setTheme(dark ? "dark" : "light"));
+      }
+      theme();
+      document.getElementById("theme").onclick = () => {
+        dark = !dark;
+        theme();
+      };
+      document.getElementById("replay").onclick = () =>
+        players.forEach((p) => p.replay());
+      document.getElementById("play").onclick = () =>
+        players.forEach((p) => p.play());
+      document.getElementById("pause").onclick = () =>
+        players.forEach((p) => p.pause());
+      document.getElementById("inline-replay").onclick = () =>
+        players[2].replay();
+      slider.oninput = () =>
+        players.forEach((p) => p.seek(Number(slider.value)));
+      let frame;
+      function update() {
+        const state = players[0].getState();
+        if (document.activeElement !== slider)
+          slider.value = String(state.progress);
+        value.value = Math.round(state.progress) + "%";
+        status.textContent = `${state.playing ? "Playing" : "Paused"} · ${state.revealed} / ${state.painted} painted samples · ${state.duration.toFixed(2)} s timeline · ${players.length} independent instances`;
+        frame = requestAnimationFrame(update);
+      }
+      update();
+      window.addEventListener("pagehide", (event) => {
+        if (!event.persisted) {
+          cancelAnimationFrame(frame);
+          players.forEach((p) => p.destroy());
+        }
+      });
+    </script>
+  </body>
+</html>

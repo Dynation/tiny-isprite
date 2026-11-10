@@ -657,6 +657,22 @@ function App() {
             <FillAnimation
               key={current.name}
               active={inspectorTab === "animation"}
+              name={current.name}
+              defaultTheme={previewTheme}
+              palettes={{
+                light: {
+                  color,
+                  ...Object.fromEntries(
+                    variables.map((v) => [v.name, v.value]),
+                  ),
+                },
+                dark: {
+                  color: themeExample.foregroundDark,
+                  ...Object.fromEntries(
+                    themeExample.paints.map((v) => [v.name, v.dark]),
+                  ),
+                },
+              }}
               svg={artifact?.selected?.svg || ""}
               variables={variables}
               targetRef={artworkRef}

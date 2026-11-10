@@ -44,7 +44,8 @@
     "check:release": "npm run typecheck && npm test && npm run test:compat && npm run test:browser && npm run test:production && npm audit",
     "dev:demo": "npm run dev --prefix demo",
     "build:demo": "npm run build --prefix demo",
-    "test:playground": "npm run build:demo && npm test --prefix demo && node test/playground.mjs"
+    "test:playground": "npm run build:demo && npm test --prefix demo && node test/playground.mjs && node test/animation-export.mjs",
+    "test:animation-export": "npm run build:demo && node test/animation-export.mjs"
   },
   "keywords": [
     "svg",

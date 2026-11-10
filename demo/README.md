@@ -141,7 +141,8 @@ The radial alternative uses the same preview controls but expands by geometric
 distance from the inlet instead of distance inside the shape. Its downloadable
 CSS-only example reveals the whole icon with clip-path: circle(). That shortcut
 does not include per-paint tracks or flow around holes. Shape-following flow
-currently needs JavaScript and is preview-only.
+uses JavaScript; Export animation ZIP packages its prepared maps and player for
+independent playback.
 
 Tests cover a U-shaped obstacle, disconnected pieces and paint boundaries,
 overlapping/incomplete tracks, browser playback, origin changes, reduced motion,
@@ -161,3 +162,34 @@ SVG viewport (including letterboxing) and updates when that viewport resizes.
 
 Browser assertions cover simultaneous artwork/timeline visibility at desktop,
 tablet and phone widths, timeline order, scrolling and state across tab changes.
+
+## Full portable animation export
+
+Enable animation, configure paint timing and click Export animation ZIP. It ships
+cleaned artwork, animation-data.js (schema v1, packed precomputed arrival/paint
+maps, bounds, tracks and light/dark palettes), a dependency-free player.js,
+AnimatedIcon.jsx, JS/React usage examples, an independent index.html consumer and
+the player license. No payment or server dependency is included.
+
+The exported player does not rasterize SVG or calculate graph distances. It
+decodes the prepared little-endian uint16 maps once and renders threshold masks.
+Mask bounds are stored in SVG coordinates, including editor letterboxing, so
+responsive instances do not need to recompute the geometry. Complete fills remove
+the mask and render the exact vector. Multiple instances rename internal IDs and
+manage their own playback/listeners. The React wrapper supports SSR import,
+StrictMode, controlled progress, theme/color changes and cleanup. See the ZIP's
+README for the API and an HTTP-server example (ES modules need an HTTP origin).
+For strict CSP consumers, allow data: images for the generated alpha masks.
+
+Portable playback supports play/replay/pause/seek, partial final paints, reduced
+motion and destroy/remount. No automatic loop is applied. Existing static exports
+remain static. Animation data changes require a new export; themes and paint
+colors can be changed by the player.
+
+`npm run test:animation-export` builds the demo, downloads the real ZIP through the
+UI and serves only extracted files on an independent origin. It checks preview
+parity, visible masks, three instances/unique IDs, offline playback, responsive
+layout, reduced motion, colors, partial ends, destroy/remount, React StrictMode and
+production React bundles. It blocks all outside requests. Optional local QA may
+set PLAYGROUND_EXPORT_SVG to a personal SVG; that source is not committed.
+`npm run test:playground` includes this consumer test.

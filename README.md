@@ -312,7 +312,9 @@ and a working theme toggle. Generated globals.css and component examples can be
 downloaded; Sprite ZIPs include these theme files.
 An optional fill-animation preview supports shape-following flow, radial reveal,
 per-paint timing and partial fills. A CSS-only whole-icon radial example can be
-downloaded; the shape-following prototype uses JavaScript and stays preview-only.
+downloaded. Export animation ZIP packages prepared fill maps, tracks and palettes
+with a standalone JavaScript player, React wrapper and an independent example
+website. The player needs no generator or remote animation service.
 Single mode supports SVGs up to 2 MB and exports up to 2048 px wide with the source
 aspect ratio.
 

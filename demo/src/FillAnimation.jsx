@@ -5,6 +5,14 @@ import {
   radialCss,
 } from "./lib/fill-animation.js";
 import { download } from "./lib/project.js";
+import {
+  encodeAnimation,
+  createAnimationBundle,
+} from "./lib/animation-export.js";
+import playerSource from "./lib/animation-player.js?raw";
+import reactSource from "./lib/animation-react.jsx?raw";
+import exampleHtml from "./lib/animation-example.html?raw";
+import license from "./lib/animation-license.txt?raw";
 
 export function FillAnimation({
   svg,
@@ -12,6 +20,9 @@ export function FillAnimation({
   targetRef,
   aspectRatio,
   active = true,
+  name = "icon",
+  palettes = { light: {}, dark: {} },
+  defaultTheme = "light",
 }) {
   const [enabled, setEnabled] = useState(false);
   const [mode, setMode] = useState("flow");
@@ -22,6 +33,8 @@ export function FillAnimation({
   const [prepared, setPrepared] = useState(null);
   const [viewportRatio, setViewportRatio] = useState(aspectRatio);
   const [error, setError] = useState("");
+  const [exporting, setExporting] = useState(false);
+  const [exportNotice, setExportNotice] = useState("");
   const [playing, setPlaying] = useState(false);
   const [reduced, setReduced] = useState(
     () => matchMedia("(prefers-reduced-motion: reduce)").matches,
@@ -190,6 +203,41 @@ export function FillAnimation({
       ...previous,
       [name]: { ...previous[name], [key]: value },
     }));
+  }
+  async function exportAnimation() {
+    if (!prepared || exporting) return;
+    stop();
+    setExporting(true);
+    setExportNotice("");
+    try {
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+      const data = encodeAnimation({
+        svg,
+        prepared,
+        tracks,
+        mode,
+        originX: x,
+        originY: y,
+        palettes,
+        defaultTheme,
+        name,
+        initialProgress: progress,
+      });
+      const bundle = createAnimationBundle(data, {
+        playerSource,
+        reactSource,
+        exampleHtml,
+        license,
+      });
+      download(bundle, `${name}-animation.zip`, "application/zip");
+      setExportNotice(
+        "Export saved. Extract the ZIP and serve its index.html, or copy the React files into your app.",
+      );
+    } catch (error) {
+      setExportNotice(`Export failed: ${error.message}`);
+    } finally {
+      setExporting(false);
+    }
   }
   const css = radialCss(x, y, tracks[0].duration);
   return (
@@ -376,9 +424,25 @@ export function FillAnimation({
             </p>
           )}
           <p>
-            Animation is preview-only. Existing SVG, React, palette and theme
-            downloads remain static.
+            Export this animation with its prepared fill maps, exact timing and
+            light/dark palettes. The ZIP includes a standalone JavaScript
+            player, React component, instructions and an independent example
+            website. No playground or animation server is needed. Regular
+            SVG/React downloads remain static.
           </p>
+          <button
+            type="button"
+            className="button primary"
+            disabled={!prepared || !!error || exporting}
+            onClick={exportAnimation}
+          >
+            {exporting ? "Preparing animation ZIP…" : "Export animation ZIP"}
+          </button>
+          {exportNotice && (
+            <p role="status" className="animation-export-notice">
+              {exportNotice}
+            </p>
+          )}
           <details>
             <summary>CSS-only radial example</summary>
             <p>
