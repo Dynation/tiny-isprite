@@ -15,28 +15,31 @@ const artifacts = path.join(repo, ".release-artifacts/region-origins");
 await mkdir(artifacts, { recursive: true });
 let server, browser;
 try {
-  const port = await freePort(),
+  let url = process.env.PLAYGROUND_URL;
+  if (!url) {
+    const port = await freePort();
     url = `http://127.0.0.1:${port}${process.env.VITE_BASE_PATH || "/"}`;
-  server = spawn(
-    process.execPath,
-    [
-      path.join(repo, "demo/node_modules/vite/bin/vite.js"),
-      "preview",
-      "--host",
-      "127.0.0.1",
-      "--port",
-      String(port),
-      "--strictPort",
-    ],
-    { cwd: path.join(repo, "demo"), stdio: "ignore" },
-  );
-  await poll(async () => {
-    try {
-      return (await fetch(url)).ok;
-    } catch {
-      return false;
-    }
-  }, "region test server");
+    server = spawn(
+      process.execPath,
+      [
+        path.join(repo, "demo/node_modules/vite/bin/vite.js"),
+        "preview",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        String(port),
+        "--strictPort",
+      ],
+      { cwd: path.join(repo, "demo"), stdio: "ignore" },
+    );
+    await poll(async () => {
+      try {
+        return (await fetch(url)).ok;
+      } catch {
+        return false;
+      }
+    }, "region test server");
+  }
   browser = await chromium.launch();
   const page = await browser.newPage({
     viewport: { width: 1440, height: 1000 },
