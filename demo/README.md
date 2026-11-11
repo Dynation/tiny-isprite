@@ -35,6 +35,29 @@ currentColor paints are materialized as #245cf3 to give them named variables;
 SVGs with implicit black fills get an explicit fill. Enable multicolor conversion
 to match the CLI's --all option. Gradient stops retain their source colors.
 
+### CSS variable granularity
+
+The generator creates one CSS variable for each explicit `fill` or `stroke`
+attribute it converts. Variables follow attribute occurrences, not color values:
+two elements with the same color still get independent variables. For example,
+two explicit fills can become `--all-orbit-fill-1` and `--all-orbit-fill-2`.
+
+A paint attribute on a group is one variable inherited by its descendants, so
+those descendants share that control unless they define their own paint. An
+omitted or inherited paint value is not independently converted by the core
+generator. The editable playground palette may materialize `currentColor` or
+an implicit fill before generation, as described above.
+
+One `<path>` with several subpaths remains one paint control, even when those
+subpaths form disconnected visible islands. Fill animation can find connected
+raster components within a paint to shape the reveal, but its timing tracks map
+to paint variables; components do not become separate tracks. Elements keep
+their SVG document order, so overlapping paints continue to composite in their
+original order.
+
+For independently editable colors or timing, author the parts as separate SVG
+graphic elements. The generator does not split paths into geometric regions.
+
 The selected icon shows its own fill/stroke variables with color pickers and HEX
 inputs. Edits persist per icon, update the preview and generated CSS, and are baked
 into exported source SVGs so the published CLI can regenerate the chosen colors.
