@@ -2167,3 +2167,19 @@ html[data-page-theme="dark"]
 .animation-integration p, .animation-integration li { font-size: 13px; line-height: 1.6; }
 .animation-integration li + li { margin-top: 8px; }
 .animation-integration textarea { display: block; box-sizing: border-box; width: 100%; margin-top: 8px; padding: 12px; font: inherit; resize: vertical; }
+
+.animation-paint-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.animation-color-dot {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  flex: 0 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px #0003;
+}

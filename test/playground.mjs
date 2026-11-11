@@ -172,6 +172,34 @@ try {
         .then((c) => c >= 3),
     "featured palette",
   );
+  const orbitColor = "--all-orbit-stroke-1";
+  await page.getByLabel(`Color ${orbitColor}`, { exact: true }).fill("#24b38c");
+  await page.getByRole("tab", { name: "Fill animation", exact: true }).click();
+  const paintDot = page.getByRole("img", {
+    name: new RegExp(`^Current color ${orbitColor}:`),
+  });
+  assert.equal(
+    await paintDot.evaluate((el) => getComputedStyle(el).backgroundColor),
+    "rgb(36, 179, 140)",
+  );
+  await page.getByRole("tab", { name: "Colors", exact: true }).click();
+  await page
+    .getByLabel(`Dark color ${orbitColor}`, { exact: true })
+    .fill("#ff8712");
+  await page.getByRole("tab", { name: "Fill animation", exact: true }).click();
+  assert.equal(
+    await paintDot.evaluate((el) => getComputedStyle(el).backgroundColor),
+    "rgb(255, 135, 18)",
+  );
+  assert.equal(await paintDot.getAttribute("title"), "#ff8712");
+  await page.getByRole("tab", { name: "Colors", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Light preview", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Reset icon", exact: true }).click();
+  console.log(
+    "PASS animation color dots follow edited light and dark artwork palettes",
+  );
   await page.getByRole("button", { name: "Bloom", exact: true }).click();
   await poll(
     () =>
@@ -997,7 +1025,7 @@ try {
     "PASS Colors/Fill animation tabs preserve state; timeline precedes effects and stays visible with artwork on desktop/mobile",
   );
   const animationGroups = await page
-    .locator(".animation-tracks fieldset > code")
+    .locator(".animation-tracks fieldset code")
     .allTextContents();
   await page
     .getByLabel(`Animation start ${animationGroups[1]}`, { exact: true })

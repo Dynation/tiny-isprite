@@ -46,8 +46,15 @@ export function FillAnimation({
   const [stats, setStats] = useState({ revealed: 0, painted: 0 });
   const frame = useRef(0),
     lastFrame = useRef(0);
+  const activePalette = palettes[defaultTheme] || palettes.light || {};
   const groups = variables.length
-    ? variables
+    ? variables.map((variable) => {
+        const value = activePalette[variable.name] || variable.value;
+        return {
+          ...variable,
+          color: value === "currentColor" ? activePalette.color : value,
+        };
+      })
     : [{ name: "all-paint", property: "All visible paint" }];
   const tracks = groups.map((group, index) => ({
     name: group.name,
@@ -387,7 +394,18 @@ export function FillAnimation({
                 <legend>
                   {groups[index].property || `Paint ${index + 1}`}
                 </legend>
-                <code>{track.name}</code>
+                <div className="animation-paint-label">
+                  {groups[index].color && (
+                    <span
+                      className="animation-color-dot"
+                      style={{ backgroundColor: groups[index].color }}
+                      role="img"
+                      aria-label={`Current color ${track.name}: ${groups[index].color}`}
+                      title={groups[index].color}
+                    />
+                  )}
+                  <code>{track.name}</code>
+                </div>
                 <div className="animation-controls">
                   <label>
                     Start (s)
