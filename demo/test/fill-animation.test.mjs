@@ -53,3 +53,23 @@ test("CSS-only export names its radial scope and respects reduced motion", () =>
   assert.match(css, /fill-reveal 2.4s/);
   assert.match(css, /prefers-reduced-motion/);
 });
+
+test("same-paint islands accept independent origins without changing other regions", () => {
+  const labels = Int32Array.from([0, 0, 0, -1, 0, 0, 0]);
+  const base = buildDistanceField(labels, 7, 1, 0, 0, {});
+  const custom = buildDistanceField(labels, 7, 1, 0, 0, { 0: { x: 1, y: 0 } });
+  assert.deepEqual([...custom.regionMap], [0, 0, 0, -1, 1, 1, 1]);
+  assert.equal(base.components[0].seed, 0);
+  assert.equal(custom.components[0].seed, 2);
+  assert.equal(custom.field[2], 0);
+  assert.equal(custom.field[0], 1);
+  assert.equal(custom.components[1].seed, base.components[1].seed);
+  assert.deepEqual([...custom.field.slice(4)], [...base.field.slice(4)]);
+  assert.deepEqual(
+    [...custom.radialField.slice(4)],
+    [...base.radialField.slice(4)],
+  );
+  assert.ok(custom.radialField[2] > base.radialField[2]);
+  assert.equal(custom.components[0].customOrigin, true);
+  assert.equal(custom.components[1].customOrigin, false);
+});

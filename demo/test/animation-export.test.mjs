@@ -100,3 +100,32 @@ test("radial exports store geometric arrival values instead of reusing the flow 
   assert.equal(flow.arrivals[1], 0);
   assert.ok(Math.abs(radial.arrivals[1] / 65534 - Math.SQRT1_2) < 1 / 65534);
 });
+
+test("independent region arrivals survive portable flow and radial exports", async () => {
+  const { buildDistanceField } = await import("../src/lib/fill-animation.js");
+  const labels = Int32Array.from([0, 0, 0, -1, 0, 0, 0]);
+  const prepared = {
+    width: 7,
+    height: 1,
+    labels,
+    ...buildDistanceField(labels, 7, 1, 0, 0, { 0: { x: 1 / 3, y: 0 } }),
+  };
+  for (const mode of ["flow", "radial"]) {
+    const data = encodeAnimation({
+      svg: '<svg width="700" height="100" viewBox="0 0 7 1"><path fill="red" d="M0 0h3v1H0zM4 0h3v1H4z"/></svg>',
+      prepared,
+      tracks: [{ name: "red", start: 0, duration: 2, end: 100 }],
+      mode,
+      originX: 0,
+      originY: 0,
+    });
+    const decoded = decodeAnimation(data),
+      field = mode === "radial" ? prepared.radialField : prepared.field;
+    for (const p of [0, 1, 2, 4, 5, 6])
+      assert.ok(Math.abs(decoded.arrivals[p] / 65534 - field[p]) < 1 / 65534);
+    assert.equal(data.regions.length, 2);
+    assert.equal(data.regions[0].customOrigin, true);
+    assert.equal(data.regions[1].customOrigin, false);
+    assert.deepEqual([...decoded.labels], [1, 1, 1, 0, 1, 1, 1]);
+  }
+});

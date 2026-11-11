@@ -238,3 +238,27 @@ Publish only `demo/dist/`, with `.nojekyll`, to `gh-pages`. Keep previously
 published hashed assets when updating, so already open tabs retain their imports.
 The default base remains `/` for the separate private Sites preview. The home
 link and favicon follow the configured base. No analytics provider is configured.
+
+### Independent region origins
+
+Enable **Separate region origins** in Fill animation. The transparent preview
+overlay selects painted regions without changing the source SVG. Select a region
+by clicking its painted area or using the Selected region list. Choose **Place
+origin on artwork**, then click a point, or enter Region X/Y percentages. The pin
+shows the nearest painted sample used as the actual inlet. **Use shared origin
+for this region** removes only that region's override.
+
+Each disconnected visible region of the same paint can use a different origin.
+Paint timing remains shared by its CSS variable. Flow and radial ZIP exports bake
+these origins into arrival maps; no extra processing is added to the portable
+player. Optional `regions` metadata records effective origins without changing
+the map format or breaking existing schema-v1 players. CSS-only radial export
+still represents the whole-icon shortcut.
+
+This mode uses a fixed artwork-aspect analysis grid, with an aligned SVG overlay
+and contain/cover mask placement to account for viewport letterboxing. Region
+identities and coordinates survive viewport/export-size changes and palette edits.
+Changes to geometry or paint grouping reset overrides. Regions are connected
+samples on the existing 320px analysis grid, not semantic SVG path objects:
+touching shapes can form one region and subpixel gaps may be indistinguishable.
+The overlay/highlight/pins never enter exported artwork.

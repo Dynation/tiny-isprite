@@ -9,6 +9,7 @@ export function buildDistanceField(
   height,
   originX = 0.5,
   originY = 0.5,
+  regionOrigins,
 ) {
   const count = width * height;
   const distance = new Int32Array(count).fill(-1);
@@ -16,6 +17,8 @@ export function buildDistanceField(
   const seen = new Uint8Array(count);
   const queue = new Int32Array(count);
   const components = [];
+  const regionMap = new Int32Array(count).fill(-1);
+  const radialField = regionOrigins ? new Float32Array(count).fill(-1) : null;
   function neighbours(index, visit) {
     const x = index % width,
       y = Math.floor(index / width);
@@ -34,6 +37,10 @@ export function buildDistanceField(
   }
   for (let start = 0; start < count; start++) {
     if (labels[start] < 0 || seen[start]) continue;
+    const regionId = components.length;
+    const origin = regionOrigins?.[regionId];
+    const ox = clamp(origin?.x ?? originX, 0, 1);
+    const oy = clamp(origin?.y ?? originY, 0, 1);
     let head = 0,
       tail = 1,
       seed = start,
@@ -42,9 +49,10 @@ export function buildDistanceField(
     seen[start] = 1;
     while (head < tail) {
       const pixel = queue[head++];
+      regionMap[pixel] = regionId;
       const d =
-        ((pixel % width) - originX * (width - 1)) ** 2 +
-        (Math.floor(pixel / width) - originY * (height - 1)) ** 2;
+        ((pixel % width) - ox * (width - 1)) ** 2 +
+        (Math.floor(pixel / width) - oy * (height - 1)) ** 2;
       if (d < nearest) {
         nearest = d;
         seed = pixel;
@@ -72,16 +80,35 @@ export function buildDistanceField(
         }
       });
     }
-    for (const pixel of pixels)
+    const radius = Math.max(
+      ...[
+        [0, 0],
+        [width, 0],
+        [0, height],
+        [width, height],
+      ].map(([px, py]) => Math.hypot(px - ox * width, py - oy * height)),
+    );
+    for (const pixel of pixels) {
       field[pixel] = maximum ? distance[pixel] / maximum : 0;
+      if (radialField)
+        radialField[pixel] =
+          Math.hypot(
+            (pixel % width) - ox * width,
+            Math.floor(pixel / width) - oy * height,
+          ) / radius;
+    }
     components.push({
+      id: regionId,
+      originX: ox,
+      originY: oy,
+      customOrigin: !!origin,
       group: labels[start],
       seed,
       maximum,
       pixels: pixels.length,
     });
   }
-  return { field, components };
+  return { field, components, regionMap, radialField };
 }
 
 export function trackProgress(time, track) {
@@ -155,7 +182,7 @@ export async function prepareFillField(
         1;
       labels[p] = id >= 0 && id < groupCount ? id : 0;
     }
-    const { field, components } = buildDistanceField(
+    const { field, components, regionMap } = buildDistanceField(
       labels,
       width,
       height,
@@ -171,6 +198,7 @@ export async function prepareFillField(
       labels,
       field,
       components,
+      regionMap,
       canvas,
       context,
       pixels: context.createImageData(width, height),
@@ -204,10 +232,11 @@ export function drawFillMask(prepared, tracks, time, mode, originX, originY) {
       const value = progress[group] ?? progress[0];
       const arrival =
         mode === "radial"
-          ? Math.hypot(
+          ? (prepared.radialField?.[p] ??
+            Math.hypot(
               (p % width) - (originX * width) / 100,
               Math.floor(p / width) - (originY * height) / 100,
-            ) / radius
+            ) / radius)
           : field[p];
       alpha =
         value <= 0

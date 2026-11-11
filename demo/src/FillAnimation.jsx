@@ -1,10 +1,12 @@
 import { animationAiPrompt } from "./lib/animation-guide.js";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
+  buildDistanceField,
   prepareFillField,
   drawFillMask,
   radialCss,
 } from "./lib/fill-animation.js";
+import { RegionOverlay } from "./RegionOrigins.jsx";
 import { download } from "./lib/project.js";
 import {
   encodeAnimation,
@@ -14,6 +16,8 @@ import playerSource from "./lib/animation-player.js?raw";
 import reactSource from "./lib/animation-react.jsx?raw";
 import exampleHtml from "./lib/animation-example.html?raw";
 import license from "./lib/animation-license.txt?raw";
+
+const emptyRegions = { origins: {}, selected: 0, placing: false };
 
 export function FillAnimation({
   svg,
@@ -32,8 +36,67 @@ export function FillAnimation({
     [y, setY] = useState(50);
   const [settings, setSettings] = useState({});
   const [progress, setProgress] = useState(100);
-  const [prepared, setPrepared] = useState(null);
+  const [analysis, setPrepared] = useState(null);
+  const [regionMode, setRegionMode] = useState(false);
+  const [regionConfig, setRegionConfig] = useState(emptyRegions);
+  const geometryKey = useMemo(() => {
+    if (!svg) return "";
+    const root = new DOMParser().parseFromString(
+      svg,
+      "image/svg+xml",
+    ).documentElement;
+    root.removeAttribute("width");
+    root.removeAttribute("height");
+    root.removeAttribute("color");
+    return new XMLSerializer()
+      .serializeToString(root)
+      .replace(/var\((--[\w-]+),[^)]+\)/g, "var($1)");
+  }, [svg]);
+  const regions =
+    regionConfig.key === geometryKey ? regionConfig : emptyRegions;
+  function changeRegions(patch) {
+    stop();
+    setRegionConfig((previous) => ({
+      ...(previous.key === geometryKey ? previous : emptyRegions),
+      key: geometryKey,
+      ...patch,
+    }));
+  }
+  function placeRegion(px, py) {
+    changeRegions({
+      origins: {
+        ...regions.origins,
+        [regions.selected]: { x: px / 100, y: py / 100 },
+      },
+      placing: false,
+    });
+  }
+  const prepared = useMemo(
+    () =>
+      regionMode && analysis
+        ? {
+            ...analysis,
+            ...buildDistanceField(
+              analysis.labels,
+              analysis.width,
+              analysis.height,
+              x / 100,
+              y / 100,
+              regions.origins,
+            ),
+          }
+        : analysis,
+    [analysis, regionMode, regions.origins, x, y],
+  );
+  const selectedRegion = prepared?.components[regions.selected];
+  const regionOrigin = regions.origins[regions.selected] || {
+    x: x / 100,
+    y: y / 100,
+  };
+  const analysisX = regionMode ? 50 : x,
+    analysisY = regionMode ? 50 : y;
   const [viewportRatio, setViewportRatio] = useState(aspectRatio);
+  const analysisRatio = regionMode ? aspectRatio : viewportRatio;
   const [error, setError] = useState("");
   const [copyNotice, setCopyNotice] = useState("");
   const [showGuide, setShowGuide] = useState(false);
@@ -80,6 +143,7 @@ export function FillAnimation({
       target.style.removeProperty("-webkit-mask-image");
       target.style.removeProperty("mask-size");
       target.style.removeProperty("mask-repeat");
+      target.style.removeProperty("mask-position");
       target.style.removeProperty("cursor");
     }
   }
@@ -120,7 +184,7 @@ export function FillAnimation({
     clearMask();
     if (!enabled || !svg || !active) return;
     let disposed = false;
-    prepareFillField(svg, variables, x, y, viewportRatio)
+    prepareFillField(svg, variables, analysisX, analysisY, analysisRatio)
       .then((value) => {
         if (!disposed) setPrepared(value);
       })
@@ -131,10 +195,10 @@ export function FillAnimation({
       disposed = true;
       clearMask();
     };
-  }, [enabled, svg, x, y, active, viewportRatio]);
+  }, [enabled, svg, analysisX, analysisY, active, analysisRatio, regionMode]);
   useEffect(() => {
     stop();
-  }, [mode, signature]);
+  }, [mode, signature, x, y, regionMode]);
   useEffect(() => {
     const target = targetRef.current?.querySelector("svg");
     if (!enabled || !prepared || !target || !active) return;
@@ -150,14 +214,25 @@ export function FillAnimation({
     target.style.webkitMaskImage = result.complete
       ? "none"
       : `url("${result.url}")`;
-    target.style.maskSize = "100% 100%";
+    const preserve =
+      target.getAttribute("preserveAspectRatio") || "xMidYMid meet";
+    const align =
+      preserve.split(/\s+/).find((value) => /^x(Min|Mid|Max)Y/.test(value)) ||
+      "xMidYMid";
+    target.style.maskSize =
+      regionMode && !preserve.includes("none")
+        ? preserve.includes("slice")
+          ? "cover"
+          : "contain"
+        : "100% 100%";
+    target.style.maskPosition = `${align.startsWith("xMin") ? "left" : align.startsWith("xMax") ? "right" : "center"} ${align.endsWith("YMin") ? "top" : align.endsWith("YMax") ? "bottom" : "center"}`;
     target.style.maskRepeat = "no-repeat";
     target.style.cursor = "crosshair";
     setStats({ revealed: result.revealed, painted: result.painted });
-  }, [enabled, prepared, progress, mode, signature, active]);
+  }, [enabled, prepared, progress, mode, signature, active, regionMode]);
   useEffect(() => {
     const target = targetRef.current?.querySelector("svg");
-    if (!enabled || !target || !active) return;
+    if (!enabled || !target || !active || regionMode) return;
     function selectPoint(event) {
       const bounds = target.getBoundingClientRect();
       stop();
@@ -180,7 +255,7 @@ export function FillAnimation({
     }
     target.addEventListener("click", selectPoint);
     return () => target.removeEventListener("click", selectPoint);
-  }, [enabled, svg, active]);
+  }, [enabled, svg, active, regionMode]);
   function play() {
     if (playing) {
       stop();
@@ -218,10 +293,14 @@ export function FillAnimation({
   async function copyAiPrompt() {
     try {
       await navigator.clipboard.writeText(animationAiPrompt);
-      setCopyNotice("Prompt copied. Attach the ZIP to your chat, or give your coding agent the extracted folder path.");
+      setCopyNotice(
+        "Prompt copied. Attach the ZIP to your chat, or give your coding agent the extracted folder path.",
+      );
     } catch {
       setShowGuide(true);
-      setCopyNotice("Clipboard unavailable. Select and copy the prompt below manually.");
+      setCopyNotice(
+        "Clipboard unavailable. Select and copy the prompt below manually.",
+      );
     }
   }
   async function exportAnimation() {
@@ -313,25 +392,59 @@ export function FillAnimation({
             </button>
           </div>
           <div className="animation-integration">
-            <button type="button" className="button secondary" onClick={copyAiPrompt}>
+            <button
+              type="button"
+              className="button secondary"
+              onClick={copyAiPrompt}
+            >
               Copy AI prompt
             </button>
-            <p>Copies text only. Download the animation ZIP and attach it to your chat,
-              or give your coding agent the path to the extracted folder. Files are not sent automatically.</p>
+            <p>
+              Copies text only. Download the animation ZIP and attach it to your
+              chat, or give your coding agent the path to the extracted folder.
+              Files are not sent automatically.
+            </p>
             {copyNotice && <p role="status">{copyNotice}</p>}
-            <details open={showGuide} onToggle={(event) => setShowGuide(event.currentTarget.open)}>
+            <details
+              open={showGuide}
+              onToggle={(event) => setShowGuide(event.currentTarget.open)}
+            >
               <summary>How to use your animation ZIP</summary>
               <ol>
-                <li>Export and extract the animation ZIP. Open README.md for the full guide.</li>
-                <li>Try the demo: in the extracted folder, run <code>python3 -m http.server 8080</code> if Python is installed, then open http://localhost:8080 and click Replay. Use HTTP, not a double-click on index.html.</li>
-                <li>HTML: copy <code>player.js</code> and <code>animation-data.js</code>, then use the complete HTML example in README.md.</li>
-                <li>React: also copy <code>AnimatedIcon.jsx</code> beside those files and render it with <code>autoPlay</code> to start. It defaults to false. See <code>react-example.jsx</code> for manual controls.</li>
+                <li>
+                  Export and extract the animation ZIP. Open README.md for the
+                  full guide.
+                </li>
+                <li>
+                  Try the demo: in the extracted folder, run{" "}
+                  <code>python3 -m http.server 8080</code> if Python is
+                  installed, then open http://localhost:8080 and click Replay.
+                  Use HTTP, not a double-click on index.html.
+                </li>
+                <li>
+                  HTML: copy <code>player.js</code> and{" "}
+                  <code>animation-data.js</code>, then use the complete HTML
+                  example in README.md.
+                </li>
+                <li>
+                  React: also copy <code>AnimatedIcon.jsx</code> beside those
+                  files and render it with <code>autoPlay</code> to start. It
+                  defaults to false. See <code>react-example.jsx</code> for
+                  manual controls.
+                </li>
               </ol>
-              <p>No tiny-isprite install is needed. Regular SVG/React downloads and artwork.svg are static. Reduced motion is respected.</p>
+              <p>
+                No tiny-isprite install is needed. Regular SVG/React downloads
+                and artwork.svg are static. Reduced motion is respected.
+              </p>
               <label>
                 AI integration prompt
-                <textarea readOnly rows={10} value={animationAiPrompt}
-                  onFocus={(event) => event.currentTarget.select()} />
+                <textarea
+                  readOnly
+                  rows={10}
+                  value={animationAiPrompt}
+                  onFocus={(event) => event.currentTarget.select()}
+                />
               </label>
             </details>
           </div>
@@ -384,9 +497,155 @@ export function FillAnimation({
               <output>{y}%</output>
             </label>
           </div>
+          <label className="region-mode-toggle">
+            <input
+              type="checkbox"
+              checked={regionMode}
+              onChange={(event) => {
+                stop();
+                setRegionMode(event.target.checked);
+              }}
+            />
+            Separate region origins
+          </label>
+          {regionMode && prepared && (
+            <section
+              className="region-origin-controls"
+              aria-label="Region origin editor"
+            >
+              <label>
+                Selected region
+                <select
+                  aria-label="Selected region"
+                  value={regions.selected}
+                  onChange={(event) =>
+                    changeRegions({
+                      selected: Number(event.target.value),
+                      placing: false,
+                    })
+                  }
+                >
+                  {prepared.components.map((region) => (
+                    <option key={region.id} value={region.id}>
+                      Region {region.id + 1} ·{" "}
+                      {groups[region.group]?.property || "Paint"} ·{" "}
+                      {region.pixels} samples
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <p>
+                Click a painted area to select it. The blue overlay highlights
+                that region; the pin shows its actual inlet. Small regions are
+                selectable from the list.
+              </p>
+              {selectedRegion && (
+                <>
+                  <div className="animation-paint-label">
+                    {groups[selectedRegion.group]?.color && (
+                      <span
+                        className="animation-color-dot"
+                        style={{
+                          backgroundColor: groups[selectedRegion.group].color,
+                        }}
+                        role="img"
+                        aria-label={`Selected region color: ${groups[selectedRegion.group].color}`}
+                      />
+                    )}
+                    <code>{groups[selectedRegion.group]?.name}</code>
+                  </div>
+                  <div className="animation-controls">
+                    <label>
+                      Region X (%)
+                      <input
+                        type="number"
+                        aria-label="Region origin X"
+                        min="0"
+                        max="100"
+                        step="0.1"
+                        value={Number((regionOrigin.x * 100).toFixed(1))}
+                        onChange={(event) =>
+                          placeRegion(
+                            Math.max(
+                              0,
+                              Math.min(100, Number(event.target.value)),
+                            ),
+                            regionOrigin.y * 100,
+                          )
+                        }
+                      />
+                    </label>
+                    <label>
+                      Region Y (%)
+                      <input
+                        type="number"
+                        aria-label="Region origin Y"
+                        min="0"
+                        max="100"
+                        step="0.1"
+                        value={Number((regionOrigin.y * 100).toFixed(1))}
+                        onChange={(event) =>
+                          placeRegion(
+                            regionOrigin.x * 100,
+                            Math.max(
+                              0,
+                              Math.min(100, Number(event.target.value)),
+                            ),
+                          )
+                        }
+                      />
+                    </label>
+                  </div>
+                  <button
+                    type="button"
+                    className="button secondary"
+                    aria-pressed={regions.placing}
+                    onClick={() => changeRegions({ placing: !regions.placing })}
+                  >
+                    {regions.placing
+                      ? "Cancel point placement"
+                      : "Place origin on artwork"}
+                  </button>
+                  <button
+                    type="button"
+                    className="palette-copy"
+                    disabled={!regions.origins[regions.selected]}
+                    onClick={() => {
+                      const origins = { ...regions.origins };
+                      delete origins[regions.selected];
+                      changeRegions({ origins, placing: false });
+                    }}
+                  >
+                    Use shared origin for this region
+                  </button>
+                  <p role="status">
+                    {regions.placing
+                      ? `Click anywhere on the artwork to place Region ${regions.selected + 1}’s origin.`
+                      : regions.origins[regions.selected]
+                        ? "Custom origin. Other regions keep their own settings."
+                        : "Using the shared origin above. Change X/Y or place a point to override it."}
+                  </p>
+                </>
+              )}
+            </section>
+          )}
+          {regionMode && enabled && active && prepared && (
+            <RegionOverlay
+              prepared={prepared}
+              targetRef={targetRef}
+              selected={regions.selected}
+              placing={regions.placing}
+              onSelect={(selected) =>
+                changeRegions({ selected, placing: false })
+              }
+              onPlace={placeRegion}
+            />
+          )}
           <p>
-            Click the artwork to choose the inlet, or use the X/Y sliders. Each
-            paint can start before another finishes.
+            {regionMode
+              ? "Region coordinates are relative to the artwork, so they survive resizing. Geometry or paint-group changes reset region overrides; color edits keep them."
+              : "Click the artwork to choose the shared inlet, or use the X/Y sliders."}{" "}
+            Each paint can start before another finishes.
           </p>
           <div className="animation-tracks">
             {tracks.map((track, index) => (
