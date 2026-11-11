@@ -91,6 +91,18 @@ test("animation bundle includes standalone runtime, data, artwork, React and con
   );
   assert.match(strFromU8(zip["animation-data.js"]), /u16le-paint-arrival-v1/);
   assert.match(strFromU8(zip["README.md"]), /file:\/\//);
+  const guide = strFromU8(zip["README.md"]);
+  const prompt = strFromU8(zip["AI-PROMPT.txt"]);
+  for (const text of [guide, prompt]) {
+    assert.match(text, /theme=\{theme\}/);
+    assert.match(text, /player\.setTheme\(/);
+    assert.match(text, /player\.setColors\(\{\}\)/);
+    assert.match(text, /'light' or 'dark'/);
+  }
+  assert.match(guide, /setColors replaces the entire override map/);
+  assert.match(guide, /does not automatically watch/);
+  assert.match(guide, /without resetting its progress/);
+  assert.match(prompt, /overrides take precedence/);
   assert.equal(strFromU8(zip["artwork.svg"]), data.svg);
 });
 

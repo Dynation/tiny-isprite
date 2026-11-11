@@ -6,6 +6,8 @@ Read README.md and inspect the actual exported files and my project first. Ask w
 
 For HTML/plain JavaScript, keep player.js and animation-data.js together, import createAnimation in a module script, and mount into an existing container with a width. Call replay() to start. For React, also copy AnimatedIcon.jsx alongside those files, import its named AnimatedIcon export, and use autoPlay to start (default is false). Keep cleanup on unmount; call destroy() only when removing a plain JavaScript instance. Do not immediately pause or destroy the startup example.
 
+Connect the project's resolved theme ('light' or 'dark', never 'system') to the animation: pass theme={theme} to AnimatedIcon in React, or call player.setTheme(theme) on each existing JavaScript instance whenever the app theme changes. The runtime does not watch page classes, data-theme or OS preferences. Preserve playback state; do not recreate the player or replay just to switch colors. Explicit colors overrides take precedence over the selected palette and persist across theme switches; clear them with colors={{}} in React or player.setColors({}) in JavaScript. Use exact paint keys from animation-data.js, not invented names.
+
 Use the supplied runtime, timing and palettes; artwork.svg alone is static. No tiny-isprite install, CDN or animation server is required. Serve ES modules over HTTP, not file://. Respect reduced motion and explain that playback does not loop automatically.
 
 Implement the integration if you have project access, then run the relevant build/checks and verify rendering and playback. Explain the changed files, how to run it, and any remaining steps. Do not claim checks passed unless you ran them.`;
@@ -68,6 +70,58 @@ export default function Example() {
 \`\`\`
 
 Run your project's usual development command. autoPlay defaults to false: omit it for a still initial frame, or use react-example.jsx for manual Replay/Pause controls. The wrapper handles cleanup on unmount. SSR reserves an empty container and mounts the SVG on the client; StrictMode mount/cleanup is supported. In Next.js, components passing callbacks such as onReady must be client components.
+
+## Connect light / dark theme
+
+Your app owns the theme; the animation receives only 'light' or 'dark'. It does not automatically watch page classes, data-theme or system preferences. Resolve 'system' to 'light' or 'dark' before passing it. Without an explicit theme, the saved defaultTheme is used.
+
+In React, pass your existing theme state or provider value to AnimatedIcon's theme prop. Changing the prop updates colors without resetting its progress. For a standalone toggle:
+
+\`\`\`jsx
+import { useState } from 'react';
+import { AnimatedIcon } from './components/animation/AnimatedIcon.jsx';
+
+export default function ThemedAnimation() {
+  const [theme, setTheme] = useState('light');
+  return (
+    <>
+      <button onClick={() => setTheme(t => t === 'light' ? 'dark' : 'light')}>
+        Switch animation theme
+      </button>
+      <AnimatedIcon width={320} autoPlay theme={theme} />
+    </>
+  );
+}
+\`\`\`
+
+This changes the animation palette only. For a site-wide switch, use the same resolved theme value your app uses for its page styles.
+
+In plain JavaScript, pass the initial theme as the third argument to createAnimation, then call setTheme on the same instance from your app's theme-change handler:
+
+\`\`\`js
+const player = createAnimation(document.querySelector('#icon'), animation, {
+  theme: 'light',
+});
+player.replay();
+
+function onAppThemeChange(resolvedTheme) {
+  player.setTheme(resolvedTheme); // 'light' or 'dark'
+}
+\`\`\`
+
+Use the imports and container from the HTML example above. Wire onAppThemeChange into your theme toggle or provider; the function name alone does not subscribe to an event. Update each instance that should follow the app theme. Do not recreate the player, seek or replay just to change themes: playback and progress stay intact.
+
+Both palettes come from animation-data.js. Configure distinct light/dark colors in the playground before exporting for a visible difference. Hard-coded SVG paints that do not use palette variables cannot be recolored by switching themes.
+
+Explicit color overrides win over the selected palette and persist across theme switches. Use exact keys from animation-data.js; '--paint-name' below is a placeholder, not a guaranteed key:
+
+\`\`\`js
+player.setColors({ '--paint-name': '#ff0000' });
+player.setTheme('dark'); // The explicit override still wins.
+player.setColors({}); // Clear overrides and restore the current palette.
+\`\`\`
+
+In React, use colors={{ '--paint-name': '#ff0000' }}. Clear it with colors={{}} or remove the prop to follow the palette again. setColors replaces the entire override map rather than merging with earlier overrides.
 
 ## Optional controls — not startup steps
 
