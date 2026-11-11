@@ -1,4 +1,10 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { createRoot } from "react-dom/client";
 import { Icon } from "tiny-isprite";
 import { samples, featuredSamples } from "./samples.js";
@@ -20,6 +26,7 @@ import { iconVariables, variableCss, colorHex } from "./lib/palette.js";
 import { singleUsageSnippet } from "./lib/usage.js";
 import { buildThemeExample, darkColor } from "./lib/theme.js";
 import { FillAnimation } from "./FillAnimation.jsx";
+import { loadDraft, saveDraft } from "./lib/local-draft.js";
 import "./style.css";
 
 const github = "https://github.com/Dynation/tiny-isprite";
@@ -72,7 +79,19 @@ function BrandMark({ small = false }) {
     </svg>
   );
 }
-function App() {
+function App({ initialDraft, storageError = "" }) {
+  const start = initialDraft || {};
+  const [animationStates, setAnimationStates] = useState(
+    start.animationStates || {},
+  );
+  const rememberAnimation = useCallback(
+    (name, state) =>
+      setAnimationStates((previous) => ({ ...previous, [name]: state })),
+    [],
+  );
+  const [draftStatus, setDraftStatus] = useState(
+    storageError ? "unavailable" : "saved",
+  );
   const [pageTheme, setPageTheme] = useState(() => {
     try {
       return localStorage.getItem("isprite-page-theme") === "light"
@@ -92,9 +111,9 @@ function App() {
     } catch {}
   }, [pageTheme]);
   const [icons, setIcons] = useState(() =>
-    samples.map((icon) => ({ ...icon })),
+    (start.icons || samples).map((icon) => ({ ...icon })),
   );
-  const [target, setTarget] = useState("single");
+  const [target, setTarget] = useState(start.target || "single");
   const single = target === "single";
   const [options, setOptions] = useState({
     ...defaultOptions,
@@ -103,17 +122,90 @@ function App() {
     editablePalette: true,
     palette: {},
     strokeWidths: {},
+    ...start.options,
   });
   const [query, setQuery] = useState("");
-  const [selected, setSelected] = useState("orbit");
-  const [color, setColor] = useState("#245cf3");
-  const [previewTheme, setPreviewTheme] = useState("light");
-  const [darkPalettes, setDarkPalettes] = useState({});
-  const [darkForegrounds, setDarkForegrounds] = useState({});
-  const [size, setSize] = useState(256);
+  const [selected, setSelected] = useState(start.selected || "orbit");
+  const [color, setColor] = useState(start.color || "#245cf3");
+  const [previewTheme, setPreviewTheme] = useState(
+    start.previewTheme || "light",
+  );
+  const [darkPalettes, setDarkPalettes] = useState(start.darkPalettes || {});
+  const [darkForegrounds, setDarkForegrounds] = useState(
+    start.darkForegrounds || {},
+  );
+  const [size, setSize] = useState(start.size || 256);
 
-  const [tab, setTab] = useState("usage");
-  const [inspectorTab, setInspectorTab] = useState("animation");
+  const [tab, setTab] = useState(start.tab || "usage");
+  const [inspectorTab, setInspectorTab] = useState(
+    start.inspectorTab || "animation",
+  );
+  const draft = useMemo(
+    () => ({
+      version: 1,
+      icons,
+      target,
+      options,
+      selected,
+      color,
+      previewTheme,
+      darkPalettes,
+      darkForegrounds,
+      size,
+      tab,
+      inspectorTab,
+      animationStates,
+    }),
+    [
+      icons,
+      target,
+      options,
+      selected,
+      color,
+      previewTheme,
+      darkPalettes,
+      darkForegrounds,
+      size,
+      tab,
+      inspectorTab,
+      animationStates,
+    ],
+  );
+  const latestDraft = useRef(draft);
+  latestDraft.current = draft;
+  useEffect(() => {
+    if (storageError) return;
+    let disposed = false;
+    setDraftStatus("saving");
+    const timer = setTimeout(() => {
+      saveDraft(draft).then(
+        () => {
+          if (!disposed) setDraftStatus("saved");
+        },
+        () => {
+          if (!disposed) setDraftStatus("unavailable");
+        },
+      );
+    }, 250);
+    return () => {
+      disposed = true;
+      clearTimeout(timer);
+    };
+  }, [draft]);
+  useEffect(() => {
+    const flush = () => {
+      if (!storageError) saveDraft(latestDraft.current).catch(() => {});
+    };
+    const hidden = () => {
+      if (document.visibilityState === "hidden") flush();
+    };
+    window.addEventListener("pagehide", flush);
+    document.addEventListener("visibilitychange", hidden);
+    return () => {
+      window.removeEventListener("pagehide", flush);
+      document.removeEventListener("visibilitychange", hidden);
+    };
+  }, []);
   const inspectorControls = useRef(null);
   function selectInspectorTab(value) {
     setInspectorTab(value);
@@ -380,6 +472,11 @@ function App() {
   }
   function remove(name) {
     setIcons((previous) => previous.filter((icon) => icon.name !== name));
+    setAnimationStates((previous) => {
+      const next = { ...previous };
+      delete next[name];
+      return next;
+    });
   }
   function saveBundle() {
     if (ready)
@@ -706,6 +803,8 @@ function App() {
           >
             <FillAnimation
               key={current.name}
+              initialState={animationStates[current.name]}
+              onStateChange={rememberAnimation}
               active={inspectorTab === "animation"}
               initiallyEnabled={!!current.featured}
               name={current.name}
@@ -799,6 +898,17 @@ function App() {
             </a>
           </div>
         </section>
+        <p
+          className="draft-status"
+          role="status"
+          data-draft-status={draftStatus}
+        >
+          {draftStatus === "saved"
+            ? "Draft saved in this browser. Your files are not uploaded."
+            : draftStatus === "saving"
+              ? "Saving local draft…"
+              : "Local draft storage is unavailable. Your edits still work in this tab; export a ZIP to keep them."}
+        </p>
         <section
           id="playground"
           className="workspace"
@@ -1604,4 +1714,40 @@ function App() {
   );
 }
 
-createRoot(document.getElementById("root")).render(<App />);
+function Workspace() {
+  const [loaded, setLoaded] = useState(false),
+    [draft, setDraft] = useState(null),
+    [error, setError] = useState("");
+  useEffect(() => {
+    let disposed = false;
+    loadDraft()
+      .then((value) => {
+        if (value)
+          value.icons = value.icons.map((icon) => ({
+            ...icon,
+            content: cleanSvg(icon.content, icon.name, SINGLE_FILE_SIZE),
+          }));
+        if (!disposed) {
+          setDraft(value);
+          setLoaded(true);
+        }
+      })
+      .catch(() => {
+        if (!disposed) {
+          setError("unavailable");
+          setLoaded(true);
+        }
+      });
+    return () => {
+      disposed = true;
+    };
+  }, []);
+  return loaded ? (
+    <App initialDraft={draft} storageError={error} />
+  ) : (
+    <p className="draft-loading" role="status">
+      Opening your local workspace…
+    </p>
+  );
+}
+createRoot(document.getElementById("root")).render(<Workspace />);

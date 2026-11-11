@@ -2338,3 +2338,19 @@ html[data-page-theme="dark"] .region-editor-popover {
 html[data-page-theme="dark"] .region-editor-resets button {
   color: #9ab7ff;
 }
+.draft-status {
+  margin: -12px 0 16px;
+  color: #697761;
+  font-size: 11px;
+  line-height: 1.6;
+}
+html[data-page-theme="dark"] .draft-status {
+  color: #a9b6cc;
+}
+.draft-status[data-draft-status="unavailable"] {
+  color: #b85f28;
+}
+.draft-loading {
+  margin: 40px;
+  font: 14px system-ui;
+}

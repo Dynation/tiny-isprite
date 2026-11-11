@@ -1,3 +1,4 @@
+import { captureTopology, resolveRegions } from "./lib/animation-state.js";
 import { animationAiPrompt } from "./lib/animation-guide.js";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -33,19 +34,24 @@ export function FillAnimation({
   aspectRatio,
   active = true,
   initiallyEnabled = false,
+  initialState,
+  onStateChange,
   name = "icon",
   palettes = { light: {}, dark: {} },
   defaultTheme = "light",
 }) {
-  const [enabled, setEnabled] = useState(initiallyEnabled);
-  const [mode, setMode] = useState("flow");
-  const [x, setX] = useState(50),
-    [y, setY] = useState(50);
-  const [settings, setSettings] = useState({});
-  const [progress, setProgress] = useState(100);
+  const saved = initialState || {};
+  const [enabled, setEnabled] = useState(saved.enabled ?? initiallyEnabled);
+  const [mode, setMode] = useState(saved.mode || "flow");
+  const [x, setX] = useState(saved.x ?? 50),
+    [y, setY] = useState(saved.y ?? 50);
+  const [settings, setSettings] = useState(saved.settings || {});
+  const [progress, setProgress] = useState(saved.progress ?? 100);
   const [analysis, setPrepared] = useState(null);
-  const [regionMode, setRegionMode] = useState(false);
-  const [regionConfig, setRegionConfig] = useState(emptyRegions);
+  const [regionMode, setRegionMode] = useState(saved.regionMode || false);
+  const [regionConfig, setRegionConfig] = useState(
+    saved.regionConfig || emptyRegions,
+  );
   const geometryKey = useMemo(() => {
     if (!svg) return "";
     const root = new DOMParser().parseFromString(
@@ -55,19 +61,36 @@ export function FillAnimation({
     root.removeAttribute("width");
     root.removeAttribute("height");
     root.removeAttribute("color");
-    return new XMLSerializer()
-      .serializeToString(root)
-      .replace(/var\((--[\w-]+),[^)]+\)/g, "var($1)");
+    for (const element of [root, ...root.querySelectorAll("*")]) {
+      element.removeAttribute("stroke-width");
+      for (const attribute of [...element.attributes]) {
+        const variable = attribute.value
+          .trim()
+          .match(/^var\(\s*(--[\w-]+)(?:\s*,[\s\S]*)?\)$/);
+        if (variable) attribute.value = `var(${variable[1]})`;
+      }
+    }
+    // The line-width editor introduces presentation-only group wrappers.
+    for (const group of [...root.querySelectorAll("g")].reverse())
+      if (!group.attributes.length) group.replaceWith(...group.childNodes);
+    return new XMLSerializer().serializeToString(root);
   }, [svg]);
-  const regions =
-    regionConfig.key === geometryKey ? regionConfig : emptyRegions;
+  const paintNames = variables.length
+    ? variables.map((variable) => variable.name)
+    : ["all-paint"];
+  const paintSignature = JSON.stringify(paintNames);
+  const regions = useMemo(
+    () => resolveRegions(regionConfig, analysis, paintNames, geometryKey),
+    [regionConfig, analysis, geometryKey, paintSignature],
+  );
   function changeRegions(patch) {
     stop();
-    setRegionConfig((previous) => ({
-      ...(previous.key === geometryKey ? previous : emptyRegions),
+    setRegionConfig({
+      ...regions,
       key: geometryKey,
+      ...(analysis ? { topology: captureTopology(analysis, paintNames) } : {}),
       ...patch,
-    }));
+    });
   }
   function placeRegion(px, py) {
     changeRegions({
@@ -114,6 +137,22 @@ export function FillAnimation({
     () => matchMedia("(prefers-reduced-motion: reduce)").matches,
   );
   const [stats, setStats] = useState({ revealed: 0, painted: 0 });
+  const snapshot = useMemo(
+    () => ({
+      enabled,
+      mode,
+      x,
+      y,
+      settings,
+      progress,
+      regionMode,
+      regionConfig: { ...regionConfig, placing: false, editing: false },
+    }),
+    [enabled, mode, x, y, settings, progress, regionMode, regionConfig],
+  );
+  useEffect(() => {
+    if (!playing) onStateChange?.(name, snapshot);
+  }, [name, snapshot, playing, onStateChange]);
   const frame = useRef(0),
     lastFrame = useRef(0);
   const activePalette = palettes[defaultTheme] || palettes.light || {};
@@ -607,6 +646,13 @@ export function FillAnimation({
                 that region; the pin shows its actual inlet. Small regions are
                 selectable from the list.
               </p>
+              {!!regions.retained?.length && (
+                <p role="status">
+                  Settings for {regions.retained.length} changed or hidden
+                  regions are kept in your draft. They will apply again when
+                  those regions can be matched.
+                </p>
+              )}
               {selectedRegion && (
                 <>
                   <div className="region-quick-actions">
@@ -614,9 +660,7 @@ export function FillAnimation({
                       type="button"
                       id="edit-region-settings"
                       className="button secondary"
-                      onClick={() =>
-                        openRegionEditor(regions.selected)
-                      }
+                      onClick={() => openRegionEditor(regions.selected)}
                     >
                       Edit region settings
                     </button>
@@ -680,7 +724,7 @@ export function FillAnimation({
           )}
           <p>
             {regionMode
-              ? "Region coordinates are relative to the artwork, so they survive resizing. Geometry or paint-group changes reset region overrides; color edits keep them."
+              ? "Region coordinates are relative to the artwork. Palette and line edits keep your settings; unmatched regions are retained in your local draft."
               : "Click the artwork to choose the shared inlet, or use the X/Y sliders."}{" "}
             Each paint can start before another finishes.
           </p>

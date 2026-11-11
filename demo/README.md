@@ -263,7 +263,7 @@ still represents the whole-icon shortcut.
 This mode uses a fixed artwork-aspect analysis grid, with an aligned SVG overlay
 and contain/cover mask placement to account for viewport letterboxing. Region
 identities and coordinates survive viewport/export-size changes and palette edits.
-Changes to geometry or paint grouping reset overrides. Regions are connected
+Changes to geometry or paint grouping can temporarily leave overrides unapplied; their previous configurations are retained. Regions are connected
 samples on the existing 320px analysis grid, not semantic SVG path objects:
 touching shapes can form one region and subpixel gaps may be indistinguishable.
 The overlay/highlight/pins never enter exported artwork.
@@ -275,3 +275,27 @@ links each region to its compiled track. Inherited tracks with no remaining
 regions are omitted so they do not extend playback. Existing schema-v1 players
 need no change. Export remains limited to 4095 effective timing tracks; an
 explicit error disables play/export if that limit is exceeded.
+
+### Local workspace drafts
+
+The editor saves its workspace in IndexedDB in the current browser: cleaned SVG
+sources, selected icon/output, palettes, line width, export size, active tabs and
+per-icon animation settings. Switching icons restores that icon's animation;
+Colors/Fill animation switches pause rendering without discarding settings.
+Reload restores the workspace and paused timeline position. Playback frames,
+canvases and prepared arrival maps are rebuilt instead of being stored.
+
+A local-draft status reports saving/saved/unavailable. Saves are batched and
+serialized, with an extra flush when the page is hidden. Blocked or exhausted
+browser storage does not stop editing, and failed/unsupported restores are not
+overwritten with the sample defaults. Drafts are local to this browser and site
+origin; clearing site data removes them. Exported ZIPs remain the portable backup.
+
+Stroke-width and palette edits no longer invalidate region schedules. Region
+identity ignores presentation-only line-width wrappers and paint fallback values;
+painted overlap maps edited regions onto rebuilt topology rather than reusing
+scan indices. Splits inherit the previous region's overrides. Merged or missing
+regions retain unapplied records, shown by a notice, so reverting the edit can
+recover their settings. Actual geometry changes keep earlier configurations in
+the draft instead of deleting them. New explicit edits take precedence when
+matching stored records.
