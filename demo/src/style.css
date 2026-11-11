@@ -2244,3 +2244,97 @@ html[data-page-theme="dark"] .region-origin-controls select {
   background: #253146;
   color: #d9e5fa;
 }
+.region-quick-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.region-editor-popover {
+  position: fixed;
+  z-index: 100;
+  width: min(304px, calc(100vw - 16px));
+  max-height: calc(100dvh - 16px);
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fff;
+  color: #242b2c;
+  box-shadow: 0 12px 40px #0005;
+}
+.region-editor-popover header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.region-editor-popover h3 {
+  margin: 0;
+  font-size: 14px;
+}
+.region-editor-popover header button {
+  font-size: 22px;
+  min-width: 32px;
+  height: 32px;
+  border-radius: 6px;
+}
+.region-editor-popover code {
+  font-size: 10px;
+  overflow-wrap: anywhere;
+}
+.region-editor-coordinates,
+.region-editor-timing {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+.region-editor-timing {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.region-editor-popover label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 10px;
+}
+.region-editor-popover input {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  font-size: 12px;
+  padding: 7px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+}
+.region-editor-popover p {
+  font-size: 11px;
+  line-height: 1.6;
+  margin: 10px 0;
+}
+.region-editor-popover .button {
+  width: 100%;
+}
+.region-editor-resets {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+.region-editor-resets button {
+  font-size: 11px;
+  color: #245cf3;
+  padding: 4px 0;
+}
+html[data-page-theme="dark"] .region-editor-popover {
+  background: #191f2b;
+  color: #d9e5fa;
+  border-color: #3a4961;
+}
+html[data-page-theme="dark"] .region-editor-resets button {
+  color: #9ab7ff;
+}

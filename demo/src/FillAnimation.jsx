@@ -2,6 +2,7 @@ import { animationAiPrompt } from "./lib/animation-guide.js";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   buildDistanceField,
+  buildRegionTiming,
   prepareFillField,
   drawFillMask,
   radialCss,
@@ -17,7 +18,13 @@ import reactSource from "./lib/animation-react.jsx?raw";
 import exampleHtml from "./lib/animation-example.html?raw";
 import license from "./lib/animation-license.txt?raw";
 
-const emptyRegions = { origins: {}, selected: 0, placing: false };
+const emptyRegions = {
+  origins: {},
+  timings: {},
+  selected: 0,
+  placing: false,
+  editing: false,
+};
 
 export function FillAnimation({
   svg,
@@ -127,10 +134,69 @@ export function FillAnimation({
     ...settings[group.name],
     index,
   }));
-  const total = Math.max(
-    ...tracks.map((track) => track.start + track.duration),
-  );
   const signature = JSON.stringify(tracks);
+  const timing = useMemo(
+    () =>
+      regionMode && prepared
+        ? buildRegionTiming(prepared, tracks, regions.timings)
+        : { tracks, labels: prepared?.labels },
+    [prepared, regionMode, regions.timings, signature],
+  );
+  const playback = useMemo(
+    () =>
+      prepared
+        ? {
+            ...prepared,
+            playbackLabels: timing.labels,
+            regionTracks: timing.regionTracks,
+          }
+        : null,
+    [prepared, timing],
+  );
+  const total = Math.max(
+    ...timing.tracks.map((track) => track.start + track.duration),
+  );
+  const selectedTiming = {
+    ...tracks[selectedRegion?.group || 0],
+    ...regions.timings[regions.selected],
+  };
+  function updateRegionTiming(key, value) {
+    changeRegions({
+      timings: {
+        ...regions.timings,
+        [regions.selected]: {
+          ...regions.timings[regions.selected],
+          [key]: value,
+        },
+      },
+    });
+  }
+  function resetRegionTiming() {
+    const timings = { ...regions.timings };
+    delete timings[regions.selected];
+    changeRegions({ timings });
+  }
+  function resetRegionOrigin() {
+    const origins = { ...regions.origins };
+    delete origins[regions.selected];
+    changeRegions({ origins, placing: false });
+  }
+  function openRegionEditor(selected) {
+    targetRef.current?.parentElement?.scrollIntoView({
+      block: "nearest",
+      behavior: "instant",
+    });
+    changeRegions({ selected, editing: true, placing: false });
+  }
+  function closeRegionEditor(restoreFocus = true) {
+    changeRegions({ editing: false });
+    if (restoreFocus !== false)
+      requestAnimationFrame(() =>
+        document
+          .getElementById("edit-region-settings")
+          ?.focus({ preventScroll: true }),
+      );
+  }
   function stop() {
     cancelAnimationFrame(frame.current);
     frame.current = 0;
@@ -203,8 +269,8 @@ export function FillAnimation({
     const target = targetRef.current?.querySelector("svg");
     if (!enabled || !prepared || !target || !active) return;
     const result = drawFillMask(
-      prepared,
-      tracks,
+      playback,
+      timing.tracks,
       (progress * total) / 100,
       mode,
       x,
@@ -229,7 +295,7 @@ export function FillAnimation({
     target.style.maskRepeat = "no-repeat";
     target.style.cursor = "crosshair";
     setStats({ revealed: result.revealed, painted: result.painted });
-  }, [enabled, prepared, progress, mode, signature, active, regionMode]);
+  }, [enabled, playback, progress, mode, signature, active, regionMode, total]);
   useEffect(() => {
     const target = targetRef.current?.querySelector("svg");
     if (!enabled || !target || !active || regionMode) return;
@@ -312,8 +378,8 @@ export function FillAnimation({
       await new Promise((resolve) => requestAnimationFrame(resolve));
       const data = encodeAnimation({
         svg,
-        prepared,
-        tracks,
+        prepared: playback,
+        tracks: timing.tracks,
         mode,
         originX: x,
         originY: y,
@@ -360,7 +426,7 @@ export function FillAnimation({
             <button
               type="button"
               className="button secondary"
-              disabled={!prepared || !!error}
+              disabled={!prepared || !!error || !!timing.error}
               onClick={play}
             >
               {playing ? "Pause fill" : "Play fill"}
@@ -385,7 +451,7 @@ export function FillAnimation({
             <button
               type="button"
               className="button primary animation-export-action"
-              disabled={!prepared || !!error || exporting}
+              disabled={!prepared || !!error || !!timing.error || exporting}
               onClick={exportAnimation}
             >
               {exporting ? "Preparing animation ZIP…" : "Export animation ZIP"}
@@ -450,6 +516,7 @@ export function FillAnimation({
           </div>
           <div className="animation-status" role="status">
             {error ||
+              timing.error ||
               (!prepared
                 ? "Preparing fill paths…"
                 : `${prepared.components.length} connected regions · ${stats.revealed} / ${stats.painted} painted samples visible`)}
@@ -522,6 +589,7 @@ export function FillAnimation({
                     changeRegions({
                       selected: Number(event.target.value),
                       placing: false,
+                      editing: false,
                     })
                   }
                 >
@@ -541,89 +609,37 @@ export function FillAnimation({
               </p>
               {selectedRegion && (
                 <>
-                  <div className="animation-paint-label">
-                    {groups[selectedRegion.group]?.color && (
-                      <span
-                        className="animation-color-dot"
-                        style={{
-                          backgroundColor: groups[selectedRegion.group].color,
-                        }}
-                        role="img"
-                        aria-label={`Selected region color: ${groups[selectedRegion.group].color}`}
-                      />
-                    )}
-                    <code>{groups[selectedRegion.group]?.name}</code>
+                  <div className="region-quick-actions">
+                    <button
+                      type="button"
+                      id="edit-region-settings"
+                      className="button secondary"
+                      onClick={() =>
+                        openRegionEditor(regions.selected)
+                      }
+                    >
+                      Edit region settings
+                    </button>
+                    <button
+                      type="button"
+                      className="palette-copy"
+                      aria-pressed={regions.placing}
+                      onClick={() =>
+                        changeRegions({
+                          placing: !regions.placing,
+                          editing: false,
+                        })
+                      }
+                    >
+                      {regions.placing
+                        ? "Cancel point placement"
+                        : "Place origin on artwork"}
+                    </button>
                   </div>
-                  <div className="animation-controls">
-                    <label>
-                      Region X (%)
-                      <input
-                        type="number"
-                        aria-label="Region origin X"
-                        min="0"
-                        max="100"
-                        step="0.1"
-                        value={Number((regionOrigin.x * 100).toFixed(1))}
-                        onChange={(event) =>
-                          placeRegion(
-                            Math.max(
-                              0,
-                              Math.min(100, Number(event.target.value)),
-                            ),
-                            regionOrigin.y * 100,
-                          )
-                        }
-                      />
-                    </label>
-                    <label>
-                      Region Y (%)
-                      <input
-                        type="number"
-                        aria-label="Region origin Y"
-                        min="0"
-                        max="100"
-                        step="0.1"
-                        value={Number((regionOrigin.y * 100).toFixed(1))}
-                        onChange={(event) =>
-                          placeRegion(
-                            regionOrigin.x * 100,
-                            Math.max(
-                              0,
-                              Math.min(100, Number(event.target.value)),
-                            ),
-                          )
-                        }
-                      />
-                    </label>
-                  </div>
-                  <button
-                    type="button"
-                    className="button secondary"
-                    aria-pressed={regions.placing}
-                    onClick={() => changeRegions({ placing: !regions.placing })}
-                  >
-                    {regions.placing
-                      ? "Cancel point placement"
-                      : "Place origin on artwork"}
-                  </button>
-                  <button
-                    type="button"
-                    className="palette-copy"
-                    disabled={!regions.origins[regions.selected]}
-                    onClick={() => {
-                      const origins = { ...regions.origins };
-                      delete origins[regions.selected];
-                      changeRegions({ origins, placing: false });
-                    }}
-                  >
-                    Use shared origin for this region
-                  </button>
                   <p role="status">
                     {regions.placing
                       ? `Click anywhere on the artwork to place Region ${regions.selected + 1}’s origin.`
-                      : regions.origins[regions.selected]
-                        ? "Custom origin. Other regions keep their own settings."
-                        : "Using the shared origin above. Change X/Y or place a point to override it."}
+                      : "Double-click the region or its pin to edit coordinates and timing."}
                   </p>
                 </>
               )}
@@ -636,9 +652,30 @@ export function FillAnimation({
               selected={regions.selected}
               placing={regions.placing}
               onSelect={(selected) =>
-                changeRegions({ selected, placing: false })
+                changeRegions({ selected, placing: false, editing: false })
               }
               onPlace={placeRegion}
+              onEdit={openRegionEditor}
+              editor={
+                regions.editing
+                  ? {
+                      origin: regionOrigin,
+                      timing: selectedTiming,
+                      customOrigin: !!regions.origins[regions.selected],
+                      customTiming: !!Object.keys(
+                        regions.timings[regions.selected] || {},
+                      ).length,
+                      paint: groups[selectedRegion?.group || 0],
+                      onOrigin: placeRegion,
+                      onTiming: updateRegionTiming,
+                      onResetTiming: resetRegionTiming,
+                      onResetOrigin: resetRegionOrigin,
+                      onPlace: () =>
+                        changeRegions({ editing: false, placing: true }),
+                      onClose: closeRegionEditor,
+                    }
+                  : null
+              }
             />
           )}
           <p>

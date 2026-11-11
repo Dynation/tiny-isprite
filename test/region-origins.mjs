@@ -87,7 +87,20 @@ try {
     2,
   );
   const overlay = page.getByLabel("Region selection overlay", { exact: true });
-  async function clickAt(x, y) {
+  async function openEditor() {
+    if (!(await page.getByRole("dialog").isVisible()))
+      await page
+        .getByRole("button", { name: "Edit region settings", exact: true })
+        .click();
+  }
+  async function originX() {
+    await openEditor();
+    return page.getByLabel("Region origin X", { exact: true }).inputValue();
+  }
+
+  async function clickAt(x, y, double = false) {
+    if (await page.getByRole("dialog").isVisible())
+      await page.keyboard.press("Escape");
     await page.locator(".selected-preview").scrollIntoViewIfNeeded();
     const point = await overlay.evaluate(
       (el, { x, y }) => {
@@ -99,7 +112,8 @@ try {
       },
       { x, y },
     );
-    await page.mouse.click(point.x, point.y);
+    if (double) await page.mouse.dblclick(point.x, point.y);
+    else await page.mouse.click(point.x, point.y);
   }
   await clickAt(0.2, 0.4);
   assert.equal(
@@ -110,13 +124,7 @@ try {
     .getByRole("button", { name: "Place origin on artwork", exact: true })
     .click();
   await clickAt(0.06, 0.12);
-  assert.ok(
-    Math.abs(
-      Number(
-        await page.getByLabel("Region origin X", { exact: true }).inputValue(),
-      ) - 6,
-    ) < 0.5,
-  );
+  assert.ok(Math.abs(Number(await originX()) - 6) < 0.5);
   await clickAt(0.75, 0.4);
   assert.equal(
     await page.getByLabel("Selected region", { exact: true }).inputValue(),
@@ -126,34 +134,63 @@ try {
     .getByRole("button", { name: "Place origin on artwork", exact: true })
     .click();
   await clickAt(0.89, 0.77);
-  assert.ok(
-    Math.abs(
-      Number(
-        await page.getByLabel("Region origin X", { exact: true }).inputValue(),
-      ) - 89,
-    ) < 0.5,
+  assert.ok(Math.abs(Number(await originX()) - 89) < 0.5);
+  await clickAt(0.2, 0.4, true);
+  await page
+    .getByRole("dialog", { name: "Region 1 settings", exact: true })
+    .waitFor();
+  await page.getByLabel("Region start", { exact: true }).fill("0.2");
+  await page.getByLabel("Region duration", { exact: true }).fill("1");
+  await page
+    .getByRole("button", { name: "Use color timing", exact: true })
+    .click();
+  assert.equal(
+    await page.getByLabel("Region start", { exact: true }).inputValue(),
+    "0",
   );
+  await page.getByLabel("Region start", { exact: true }).fill("0.2");
+  await page.getByLabel("Region duration", { exact: true }).fill("1");
+  await page.keyboard.press("Escape");
+  await poll(
+    () =>
+      page
+        .getByRole("button", { name: "Edit region settings", exact: true })
+        .evaluate((el) => el === document.activeElement),
+    "focus returns to region editor trigger",
+  );
+  await page.getByLabel("Selected region", { exact: true }).selectOption("1");
+  await openEditor();
+  await page.getByLabel("Region start", { exact: true }).fill("1");
+  await page.getByLabel("Region duration", { exact: true }).fill("2");
+  await page.getByLabel("Region end fill", { exact: true }).fill("60");
+  await page.locator(".inspector-heading h3").click();
+  assert.equal(await page.getByRole("dialog").count(), 0);
+
   await page.getByLabel("Selected region", { exact: true }).selectOption("0");
-  assert.ok(
-    Math.abs(
-      Number(
-        await page.getByLabel("Region origin X", { exact: true }).inputValue(),
-      ) - 6,
-    ) < 0.5,
-  );
+  assert.ok(Math.abs(Number(await originX()) - 6) < 0.5);
   await page.getByLabel("Selected region", { exact: true }).selectOption("1");
   for (const width of [390, 1024, 1440]) {
     await page.setViewportSize({ width, height: 1000 });
     await ready();
+    assert.ok(Math.abs(Number(await originX()) - 89) < 0.5);
+    const pop = await page.getByRole("dialog").boundingBox();
+    const pin = await page
+      .locator(".region-origin-marker circle")
+      .first()
+      .boundingBox();
     assert.ok(
-      Math.abs(
-        Number(
-          await page
-            .getByLabel("Region origin X", { exact: true })
-            .inputValue(),
-        ) - 89,
-      ) < 0.5,
+      pin.x >= 0 && pin.y >= 0 && pin.x < width && pin.y < 1000,
+      "edited point remains visible with its popup",
     );
+    assert.ok(
+      pop.x >= 0 &&
+        pop.y >= 0 &&
+        pop.x + pop.width <= width &&
+        pop.y + pop.height <= 1000,
+    );
+    await page.screenshot({
+      path: path.join(artifacts, `popover-${width}.png`),
+    });
     const boxes = await page.evaluate(() => {
       const a = document
           .querySelector(".selected-artwork > svg")
@@ -186,13 +223,7 @@ try {
     .fill("#13c38b");
   await page.getByRole("tab", { name: "Fill animation", exact: true }).click();
   await ready();
-  assert.ok(
-    Math.abs(
-      Number(
-        await page.getByLabel("Region origin X", { exact: true }).inputValue(),
-      ) - 89,
-    ) < 0.5,
-  );
+  assert.ok(Math.abs(Number(await originX()) - 89) < 0.5);
   await page.getByLabel("Export size in pixels", { exact: true }).fill("512");
   await poll(
     () =>
@@ -203,13 +234,7 @@ try {
     "resized vector export",
   );
   await ready();
-  assert.ok(
-    Math.abs(
-      Number(
-        await page.getByLabel("Region origin X", { exact: true }).inputValue(),
-      ) - 89,
-    ) < 0.5,
-  );
+  assert.ok(Math.abs(Number(await originX()) - 89) < 0.5);
   const event = page.waitForEvent("download");
   await page
     .getByRole("button", { name: "Export animation ZIP", exact: true })
@@ -225,7 +250,11 @@ try {
   assert.ok(Math.abs(data.regions[0].x - 6) < 0.5);
   assert.ok(Math.abs(data.regions[1].x - 89) < 0.5);
   const decoded = decodeAnimation(data);
-  assert.equal(data.tracks.length, 1);
+  assert.equal(data.tracks.length, 2);
+  assert.equal(data.tracks[data.regions[0].track].start, 0.2);
+  assert.equal(data.tracks[data.regions[1].track].start, 1);
+  assert.equal(data.tracks[data.regions[1].track].duration, 2);
+  assert.equal(data.tracks[data.regions[1].track].end, 60);
   // Same paint, opposite inlets: the left region begins at its left edge,
   // while the right region begins at its right edge.
   const at = (x, y) =>
@@ -249,11 +278,12 @@ try {
     "rotated geometry",
   );
   await ready();
-  assert.equal(
-    await page.getByLabel("Region origin X", { exact: true }).inputValue(),
-    "50",
-  );
+  assert.equal(await originX(), "50");
   assert.deepEqual(errors, []);
+  await page
+    .getByRole("button", { name: "Use color timing", exact: true })
+    .isEnabled()
+    .then((value) => assert.equal(value, false));
   console.log(
     "PASS independent same-paint region origins: click overlay, selection, point placement, letterboxing/resizing, palette persistence, geometry reset and opposite-direction portable export",
   );

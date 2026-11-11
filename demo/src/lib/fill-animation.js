@@ -111,6 +111,65 @@ export function buildDistanceField(
   return { field, components, regionMap, radialField };
 }
 
+// Compile region overrides into ordinary paint tracks. The portable player keeps
+// its existing schema: only the per-pixel track index and timing table change.
+export function buildRegionTiming(prepared, tracks, overrides = {}) {
+  const custom = prepared.components.filter(
+    (region) => Object.keys(overrides[region.id] || {}).length,
+  );
+  if (!custom.length)
+    return {
+      tracks,
+      labels: prepared.labels,
+      regionTracks: prepared.components.map((region) => region.group),
+    };
+  const inherited = new Set(
+    prepared.components
+      .filter((region) => !Object.keys(overrides[region.id] || {}).length)
+      .map((region) => region.group),
+  );
+  if (inherited.size + custom.length > 4095)
+    return {
+      tracks,
+      labels: prepared.labels,
+      error:
+        "Too many independent timing tracks (maximum 4095). Reset some region timings.",
+    };
+  const compiled = [],
+    paintIndexes = new Map(),
+    regionIndexes = new Map();
+  tracks.forEach((track, index) => {
+    if (inherited.has(index)) {
+      paintIndexes.set(index, compiled.length);
+      compiled.push(track);
+    }
+  });
+  for (const region of custom) {
+    const base = tracks[region.group],
+      settings = overrides[region.id];
+    const bounded = (key, low, high) =>
+      Number.isFinite(settings[key])
+        ? clamp(settings[key], low, high)
+        : base[key];
+    regionIndexes.set(region.id, compiled.length);
+    compiled.push({
+      ...base,
+      name: base.name,
+      start: bounded("start", 0, 30),
+      duration: bounded("duration", 0.1, 30),
+      end: bounded("end", 0, 100),
+    });
+  }
+  const regionTracks = prepared.components.map(
+    (region) => regionIndexes.get(region.id) ?? paintIndexes.get(region.group),
+  );
+  const labels = new Int32Array(prepared.labels.length).fill(-1);
+  for (let p = 0; p < labels.length; p++)
+    if (prepared.labels[p] >= 0)
+      labels[p] = regionTracks[prepared.regionMap[p]];
+  return { tracks: compiled, labels, regionTracks };
+}
+
 export function trackProgress(time, track) {
   return (
     clamp((time - track.start) / Math.max(0.1, track.duration), 0, 1) *
@@ -209,7 +268,8 @@ export async function prepareFillField(
 }
 
 export function drawFillMask(prepared, tracks, time, mode, originX, originY) {
-  const { labels, field, width, height, canvas, context, pixels } = prepared;
+  const { field, width, height, canvas, context, pixels } = prepared;
+  const labels = prepared.playbackLabels || prepared.labels;
   const progress = tracks.map((track) => trackProgress(time, track));
   let revealed = 0,
     painted = 0;

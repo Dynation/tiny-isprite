@@ -73,3 +73,35 @@ test("same-paint islands accept independent origins without changing other regio
   assert.equal(custom.components[0].customOrigin, true);
   assert.equal(custom.components[1].customOrigin, false);
 });
+
+test("region timing compiles independent schedules of the same color without mutating paint tracks", async () => {
+  const { buildRegionTiming } = await import("../src/lib/fill-animation.js");
+  const labels = Int32Array.from([0, 0, -1, 0, 0]);
+  const prepared = { labels, ...buildDistanceField(labels, 5, 1, 0, 0, {}) };
+  const tracks = [{ name: "--red", start: 0, duration: 2, end: 100 }];
+  const compiled = buildRegionTiming(prepared, tracks, {
+    0: { start: 0.5, duration: 1, end: 60 },
+  });
+  assert.deepEqual([...compiled.labels], [1, 1, -1, 0, 0]);
+  assert.deepEqual(compiled.regionTracks, [1, 0]);
+  assert.equal(compiled.tracks[1].name, "--red");
+  assert.equal(trackProgress(0.25, compiled.tracks[1]), 0);
+  assert.equal(trackProgress(0.25, compiled.tracks[0]), 0.125);
+  assert.equal(trackProgress(5, compiled.tracks[1]), 0.6);
+  assert.equal(tracks[0].end, 100);
+  const all = buildRegionTiming(
+    prepared,
+    [{ ...tracks[0], start: 30, duration: 30 }],
+    { 0: { start: 0, duration: 1 }, 1: { start: 0, duration: 2 } },
+  );
+  assert.equal(Math.max(...all.tracks.map((t) => t.start + t.duration)), 2);
+  assert.equal(buildRegionTiming(prepared, tracks, {}).labels, labels);
+  const huge = {
+    labels,
+    components: Array.from({ length: 4096 }, (_, id) => ({ id, group: 0 })),
+  };
+  const overrides = Object.fromEntries(
+    huge.components.map((c) => [c.id, { start: 1 }]),
+  );
+  assert.match(buildRegionTiming(huge, tracks, overrides).error, /4095/);
+});

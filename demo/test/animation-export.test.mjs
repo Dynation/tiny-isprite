@@ -129,3 +129,39 @@ test("independent region arrivals survive portable flow and radial exports", asy
     assert.deepEqual([...decoded.labels], [1, 1, 1, 0, 1, 1, 1]);
   }
 });
+
+test("portable export remaps same-paint regions to independent timing tracks", async () => {
+  const { buildDistanceField, buildRegionTiming, trackProgress } = await import(
+    "../src/lib/fill-animation.js"
+  );
+  const labels = Int32Array.from([0, 0, -1, 0, 0]);
+  const prepared = {
+    width: 5,
+    height: 1,
+    labels,
+    ...buildDistanceField(labels, 5, 1, 0, 0, {}),
+  };
+  const timing = buildRegionTiming(
+    prepared,
+    [{ name: "--red", start: 0, duration: 2, end: 100 }],
+    { 1: { start: 1, duration: 3, end: 60 } },
+  );
+  const data = encodeAnimation({
+    svg: '<svg viewBox="0 0 5 1"><path fill="red" d="M0 0h2v1H0zM3 0h2v1H3z"/></svg>',
+    prepared: {
+      ...prepared,
+      playbackLabels: timing.labels,
+      regionTracks: timing.regionTracks,
+    },
+    tracks: timing.tracks,
+    mode: "flow",
+    originX: 0,
+    originY: 0,
+  });
+  const decoded = decodeAnimation(data);
+  assert.deepEqual([...decoded.labels], [1, 1, 0, 2, 2]);
+  assert.equal(decoded.duration, 4);
+  assert.equal(data.regions[1].track, 1);
+  assert.equal(trackProgress(0.5, data.tracks[1]), 0);
+  assert.equal(trackProgress(10, data.tracks[1]), 0.6);
+});

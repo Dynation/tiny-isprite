@@ -244,12 +244,17 @@ link and favicon follow the configured base. No analytics provider is configured
 Enable **Separate region origins** in Fill animation. The transparent preview
 overlay selects painted regions without changing the source SVG. Select a region
 by clicking its painted area or using the Selected region list. Choose **Place
-origin on artwork**, then click a point, or enter Region X/Y percentages. The pin
-shows the nearest painted sample used as the actual inlet. **Use shared origin
-for this region** removes only that region's override.
+origin on artwork**, then click a point, or enter Region X/Y percentages in the point's popover. The pin
+shows the nearest painted sample used as the actual inlet. **Use shared origin** removes only that region's override.
 
 Each disconnected visible region of the same paint can use a different origin.
-Paint timing remains shared by its CSS variable. Flow and radial ZIP exports bake
+Paint timing supplies shared defaults. Double-click a region or its pin, or choose
+**Edit region settings**, to open a compact nonmodal popover with that region's
+X/Y, Start (s), Duration (s) and End fill (%). Start is an absolute delay from the
+beginning of the timeline. Editing a timing field overrides only that field;
+**Use color timing** restores inheritance. Coordinates are no longer repeated in
+the main panel. Escape/Close restores focus to the edit button; outside clicks
+close the popover, and the explicit button supports touch and keyboard use. Flow and radial ZIP exports bake
 these origins into arrival maps; no extra processing is added to the portable
 player. Optional `regions` metadata records effective origins without changing
 the map format or breaking existing schema-v1 players. CSS-only radial export
@@ -262,3 +267,11 @@ Changes to geometry or paint grouping reset overrides. Regions are connected
 samples on the existing 320px analysis grid, not semantic SVG path objects:
 touching shapes can form one region and subpixel gaps may be indistinguishable.
 The overlay/highlight/pins never enter exported artwork.
+
+Region timing exports compile into ordinary positional timing tracks and remap
+the per-pixel track indices. Multiple tracks may retain the same CSS-variable
+name because they represent separate regions of the same paint. Region metadata
+links each region to its compiled track. Inherited tracks with no remaining
+regions are omitted so they do not extend playback. Existing schema-v1 players
+need no change. Export remains limited to 4095 effective timing tracks; an
+explicit error disables play/export if that limit is exceeded.
