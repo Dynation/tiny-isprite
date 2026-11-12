@@ -9,6 +9,7 @@ export function buildDistanceField(
   height,
   originX = 0.5,
   originY = 0.5,
+  regionOrigins,
 ) {
   const count = width * height;
   const distance = new Int32Array(count).fill(-1);
@@ -16,6 +17,8 @@ export function buildDistanceField(
   const seen = new Uint8Array(count);
   const queue = new Int32Array(count);
   const components = [];
+  const regionMap = new Int32Array(count).fill(-1);
+  const radialField = regionOrigins ? new Float32Array(count).fill(-1) : null;
   function neighbours(index, visit) {
     const x = index % width,
       y = Math.floor(index / width);
@@ -34,6 +37,10 @@ export function buildDistanceField(
   }
   for (let start = 0; start < count; start++) {
     if (labels[start] < 0 || seen[start]) continue;
+    const regionId = components.length;
+    const origin = regionOrigins?.[regionId];
+    const ox = clamp(origin?.x ?? originX, 0, 1);
+    const oy = clamp(origin?.y ?? originY, 0, 1);
     let head = 0,
       tail = 1,
       seed = start,
@@ -42,9 +49,10 @@ export function buildDistanceField(
     seen[start] = 1;
     while (head < tail) {
       const pixel = queue[head++];
+      regionMap[pixel] = regionId;
       const d =
-        ((pixel % width) - originX * (width - 1)) ** 2 +
-        (Math.floor(pixel / width) - originY * (height - 1)) ** 2;
+        ((pixel % width) - ox * (width - 1)) ** 2 +
+        (Math.floor(pixel / width) - oy * (height - 1)) ** 2;
       if (d < nearest) {
         nearest = d;
         seed = pixel;
@@ -72,28 +80,106 @@ export function buildDistanceField(
         }
       });
     }
-    for (const pixel of pixels)
+    const radius = Math.max(
+      ...[
+        [0, 0],
+        [width, 0],
+        [0, height],
+        [width, height],
+      ].map(([px, py]) => Math.hypot(px - ox * width, py - oy * height)),
+    );
+    for (const pixel of pixels) {
       field[pixel] = maximum ? distance[pixel] / maximum : 0;
+      if (radialField)
+        radialField[pixel] =
+          Math.hypot(
+            (pixel % width) - ox * width,
+            Math.floor(pixel / width) - oy * height,
+          ) / radius;
+    }
     components.push({
+      id: regionId,
+      originX: ox,
+      originY: oy,
+      customOrigin: !!origin,
       group: labels[start],
       seed,
       maximum,
       pixels: pixels.length,
     });
   }
-  return { field, components };
+  return { field, components, regionMap, radialField };
+}
+
+// Compile region overrides into ordinary paint tracks. The portable player keeps
+// its existing schema: only the per-pixel track index and timing table change.
+export function buildRegionTiming(prepared, tracks, overrides = {}) {
+  const custom = prepared.components.filter(
+    (region) => Object.keys(overrides[region.id] || {}).length,
+  );
+  if (!custom.length)
+    return {
+      tracks,
+      labels: prepared.labels,
+      regionTracks: prepared.components.map((region) => region.group),
+    };
+  const inherited = new Set(
+    prepared.components
+      .filter((region) => !Object.keys(overrides[region.id] || {}).length)
+      .map((region) => region.group),
+  );
+  if (inherited.size + custom.length > 4095)
+    return {
+      tracks,
+      labels: prepared.labels,
+      error:
+        "Too many independent timing tracks (maximum 4095). Reset some region timings.",
+    };
+  const compiled = [],
+    paintIndexes = new Map(),
+    regionIndexes = new Map();
+  tracks.forEach((track, index) => {
+    if (inherited.has(index)) {
+      paintIndexes.set(index, compiled.length);
+      compiled.push(track);
+    }
+  });
+  for (const region of custom) {
+    const base = tracks[region.group],
+      settings = overrides[region.id];
+    const bounded = (key, low, high) =>
+      Number.isFinite(settings[key])
+        ? clamp(settings[key], low, high)
+        : base[key];
+    regionIndexes.set(region.id, compiled.length);
+    compiled.push({
+      ...base,
+      name: base.name,
+      start: bounded("start", 0, 30),
+      duration: bounded("duration", 0.01, 30),
+      end: bounded("end", 0, 100),
+    });
+  }
+  const regionTracks = prepared.components.map(
+    (region) => regionIndexes.get(region.id) ?? paintIndexes.get(region.group),
+  );
+  const labels = new Int32Array(prepared.labels.length).fill(-1);
+  for (let p = 0; p < labels.length; p++)
+    if (prepared.labels[p] >= 0)
+      labels[p] = regionTracks[prepared.regionMap[p]];
+  return { tracks: compiled, labels, regionTracks };
 }
 
 export function trackProgress(time, track) {
   return (
-    clamp((time - track.start) / Math.max(0.1, track.duration), 0, 1) *
+    clamp((time - track.start) / Math.max(0.01, track.duration), 0, 1) *
     clamp(track.end / 100, 0, 1)
   );
 }
 export function radialCss(originX, originY, duration) {
   const x = clamp(Number(originX) || 0, 0, 100),
     y = clamp(Number(originY) || 0, 0, 100);
-  const seconds = clamp(Number(duration) || 1.8, 0.1, 30);
+  const seconds = clamp(Number(duration) || 1.8, 0.01, 30);
   return `/* Whole-icon radial reveal. This circle does not travel around holes.\n   Apply className="fill-reveal" to ExampleIcon, or a wrapper around Icon.\n   No changes to the SVG paths are needed. */\n.fill-reveal {\n  animation: fill-reveal ${seconds}s linear both;\n}\n@keyframes fill-reveal {\n  from { clip-path: circle(0% at ${x}% ${y}%); }\n  to   { clip-path: circle(150% at ${x}% ${y}%); }\n}\n@media (prefers-reduced-motion: reduce) {\n  .fill-reveal { animation: none; clip-path: none; }\n}\n/* Shape-following flow uses a computed distance field in JavaScript.\n   Per-paint timing in the demo is not included in this CSS-only shortcut. */\n`;
 }
 
@@ -155,7 +241,7 @@ export async function prepareFillField(
         1;
       labels[p] = id >= 0 && id < groupCount ? id : 0;
     }
-    const { field, components } = buildDistanceField(
+    const { field, components, regionMap } = buildDistanceField(
       labels,
       width,
       height,
@@ -171,6 +257,7 @@ export async function prepareFillField(
       labels,
       field,
       components,
+      regionMap,
       canvas,
       context,
       pixels: context.createImageData(width, height),
@@ -181,7 +268,8 @@ export async function prepareFillField(
 }
 
 export function drawFillMask(prepared, tracks, time, mode, originX, originY) {
-  const { labels, field, width, height, canvas, context, pixels } = prepared;
+  const { field, width, height, canvas, context, pixels } = prepared;
+  const labels = prepared.playbackLabels || prepared.labels;
   const progress = tracks.map((track) => trackProgress(time, track));
   let revealed = 0,
     painted = 0;
@@ -204,10 +292,11 @@ export function drawFillMask(prepared, tracks, time, mode, originX, originY) {
       const value = progress[group] ?? progress[0];
       const arrival =
         mode === "radial"
-          ? Math.hypot(
+          ? (prepared.radialField?.[p] ??
+            Math.hypot(
               (p % width) - (originX * width) / 100,
               Math.floor(p / width) - (originY * height) / 100,
-            ) / radius
+            ) / radius)
           : field[p];
       alpha =
         value <= 0

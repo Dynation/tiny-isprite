@@ -100,3 +100,79 @@ test("radial exports store geometric arrival values instead of reusing the flow 
   assert.equal(flow.arrivals[1], 0);
   assert.ok(Math.abs(radial.arrivals[1] / 65534 - Math.SQRT1_2) < 1 / 65534);
 });
+
+test("independent region arrivals survive portable flow and radial exports", async () => {
+  const { buildDistanceField } = await import("../src/lib/fill-animation.js");
+  const labels = Int32Array.from([0, 0, 0, -1, 0, 0, 0]);
+  const prepared = {
+    width: 7,
+    height: 1,
+    labels,
+    ...buildDistanceField(labels, 7, 1, 0, 0, { 0: { x: 1 / 3, y: 0 } }),
+  };
+  for (const mode of ["flow", "radial"]) {
+    const data = encodeAnimation({
+      svg: '<svg width="700" height="100" viewBox="0 0 7 1"><path fill="red" d="M0 0h3v1H0zM4 0h3v1H4z"/></svg>',
+      prepared,
+      tracks: [{ name: "red", start: 0, duration: 2, end: 100 }],
+      mode,
+      originX: 0,
+      originY: 0,
+    });
+    const decoded = decodeAnimation(data),
+      field = mode === "radial" ? prepared.radialField : prepared.field;
+    for (const p of [0, 1, 2, 4, 5, 6])
+      assert.ok(Math.abs(decoded.arrivals[p] / 65534 - field[p]) < 1 / 65534);
+    assert.equal(data.regions.length, 2);
+    assert.equal(data.regions[0].customOrigin, true);
+    assert.equal(data.regions[1].customOrigin, false);
+    assert.deepEqual([...decoded.labels], [1, 1, 1, 0, 1, 1, 1]);
+  }
+});
+
+test("portable export remaps same-paint regions to independent timing tracks", async () => {
+  const { buildDistanceField, buildRegionTiming, trackProgress } = await import(
+    "../src/lib/fill-animation.js"
+  );
+  const labels = Int32Array.from([0, 0, -1, 0, 0]);
+  const prepared = {
+    width: 5,
+    height: 1,
+    labels,
+    ...buildDistanceField(labels, 5, 1, 0, 0, {}),
+  };
+  const timing = buildRegionTiming(
+    prepared,
+    [{ name: "--red", start: 0, duration: 2, end: 100 }],
+    { 1: { start: 1, duration: 3, end: 60 } },
+  );
+  const data = encodeAnimation({
+    svg: '<svg viewBox="0 0 5 1"><path fill="red" d="M0 0h2v1H0zM3 0h2v1H3z"/></svg>',
+    prepared: {
+      ...prepared,
+      playbackLabels: timing.labels,
+      regionTracks: timing.regionTracks,
+    },
+    tracks: timing.tracks,
+    mode: "flow",
+    originX: 0,
+    originY: 0,
+  });
+  const decoded = decodeAnimation(data);
+  assert.deepEqual([...decoded.labels], [1, 1, 0, 2, 2]);
+  assert.equal(decoded.duration, 4);
+  assert.equal(data.regions[1].track, 1);
+  assert.equal(trackProgress(0.5, data.tracks[1]), 0);
+  assert.equal(trackProgress(10, data.tracks[1]), 0.6);
+});
+
+test("portable timing preserves hundredths and rejects zero-length tracks", () => {
+  const data = fixture();
+  data.tracks[0] = { ...data.tracks[0], start: 0.12, duration: 0.01 };
+  data.tracks[1] = { ...data.tracks[1], start: 0.13, duration: 0.01 };
+  const restored = JSON.parse(JSON.stringify(data));
+  assert.equal(restored.tracks[0].duration, 0.01);
+  assert.ok(Math.abs(decodeAnimation(restored).duration - 0.14) < 1e-9);
+  restored.tracks[0].duration = 0;
+  assert.throws(() => decodeAnimation(restored), /Invalid paint timing/);
+});

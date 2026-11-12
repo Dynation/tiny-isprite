@@ -1,7 +1,17 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { createRoot } from "react-dom/client";
 import { Icon } from "tiny-isprite";
 import { samples, featuredSamples } from "./samples.js";
+import {
+  demoAnimationStates,
+  demoDarkPalettes,
+} from "./lib/demo-animations.js";
 import {
   buildProject,
   cleanSvg,
@@ -17,9 +27,17 @@ import {
 } from "./lib/project.js";
 import { buildSingleIcon } from "./lib/single-icon.js";
 import { iconVariables, variableCss, colorHex } from "./lib/palette.js";
+import { usesCurrentColor } from "./lib/current-color.js";
 import { singleUsageSnippet } from "./lib/usage.js";
 import { buildThemeExample, darkColor } from "./lib/theme.js";
+import {
+  PanelSeparator,
+  useEditorLayout,
+  usePanelWidth,
+} from "./EditorLayout.jsx";
+import { PreviewCanvas } from "./PreviewCanvas.jsx";
 import { FillAnimation } from "./FillAnimation.jsx";
+import { loadDraft, saveDraft } from "./lib/local-draft.js";
 import "./style.css";
 
 const github = "https://github.com/Dynation/tiny-isprite";
@@ -34,6 +52,8 @@ const symbols = {
   close: "m6 6 12 12M6 18 18 6",
   refresh: "M20 7v5h-5M4 17v-5h5M6 6a8 8 0 0 1 14 6M4 12a8 8 0 0 0 14 6",
   file: "M5 3h9l5 5v13H5zM14 3v6h5",
+  coffee:
+    "M4 8h12v7a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V8Zm12 1h2a3 3 0 0 1 0 6h-2M3 22h15M7 2v3m4-3v3m4-3v3",
 };
 function Glyph({ name, size = 18, ...props }) {
   return (
@@ -72,7 +92,77 @@ function BrandMark({ small = false }) {
     </svg>
   );
 }
-function App() {
+function App({ initialDraft, storageError = "" }) {
+  const start = initialDraft || {};
+  const [layout, updateLayout, resetLayout] = useEditorLayout();
+  const [focusMode, setFocusMode] = useState(false),
+    [mobilePanel, setMobilePanel] = useState(null);
+  const [bodyNode, setBodyNode] = useState(null),
+    [inspectorNode, setInspectorNode] = useState(null);
+  const bodyWidth = usePanelWidth(bodyNode),
+    inspectorWidth = usePanelWidth(inspectorNode);
+  const packageMax = Math.min(380, Math.max(180, bodyWidth - 620));
+  const controlsMax = Math.min(520, Math.max(260, inspectorWidth - 280));
+  const packageWidth = Math.max(180, Math.min(packageMax, layout.packageWidth));
+  const controlsWidth = Math.max(
+    260,
+    Math.min(controlsMax, layout.inspectorWidth),
+  );
+  useEffect(() => {
+    if (!focusMode && !mobilePanel) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [focusMode, mobilePanel]);
+  useEffect(() => {
+    const escape = (event) => {
+      if (event.key !== "Escape" || event.defaultPrevented) return;
+      if (mobilePanel) setMobilePanel(null);
+      else setFocusMode(false);
+    };
+    window.addEventListener("keydown", escape);
+    return () => window.removeEventListener("keydown", escape);
+  }, [mobilePanel]);
+  useEffect(() => {
+    const wide = matchMedia("(min-width: 1001px)");
+    const close = () => {
+      if (wide.matches) setMobilePanel(null);
+    };
+    wide.addEventListener("change", close);
+    return () => wide.removeEventListener("change", close);
+  }, []);
+  function openMobilePanel(panel, tab) {
+    if (tab) selectInspectorTab(tab);
+    setMobilePanel(panel);
+    requestAnimationFrame(() =>
+      document
+        .querySelector(".preview-column")
+        ?.scrollIntoView({ block: "start", behavior: "instant" }),
+    );
+  }
+  function openDownloads() {
+    setFocusMode(false);
+    setMobilePanel(null);
+    requestAnimationFrame(() =>
+      document
+        .querySelector(".export-panel")
+        ?.scrollIntoView({ block: "start", behavior: "smooth" }),
+    );
+  }
+  const [animationStates, setAnimationStates] = useState(
+    () => start.animationStates || demoAnimationStates(),
+  );
+  const [sampleRevision, setSampleRevision] = useState(0);
+  const rememberAnimation = useCallback(
+    (name, state) =>
+      setAnimationStates((previous) => ({ ...previous, [name]: state })),
+    [],
+  );
+  const [draftStatus, setDraftStatus] = useState(
+    storageError ? "unavailable" : "saved",
+  );
   const [pageTheme, setPageTheme] = useState(() => {
     try {
       return localStorage.getItem("isprite-page-theme") === "light"
@@ -92,9 +182,9 @@ function App() {
     } catch {}
   }, [pageTheme]);
   const [icons, setIcons] = useState(() =>
-    samples.map((icon) => ({ ...icon })),
+    (start.icons || samples).map((icon) => ({ ...icon })),
   );
-  const [target, setTarget] = useState("single");
+  const [target, setTarget] = useState(start.target || "single");
   const single = target === "single";
   const [options, setOptions] = useState({
     ...defaultOptions,
@@ -103,17 +193,92 @@ function App() {
     editablePalette: true,
     palette: {},
     strokeWidths: {},
+    ...start.options,
   });
   const [query, setQuery] = useState("");
-  const [selected, setSelected] = useState("orbit");
-  const [color, setColor] = useState("#245cf3");
-  const [previewTheme, setPreviewTheme] = useState("light");
-  const [darkPalettes, setDarkPalettes] = useState({});
-  const [darkForegrounds, setDarkForegrounds] = useState({});
-  const [size, setSize] = useState(256);
+  const [selected, setSelected] = useState(start.selected || "orbit");
+  const [color, setColor] = useState(start.color || "#245cf3");
+  const [previewTheme, setPreviewTheme] = useState(
+    start.previewTheme || "light",
+  );
+  const [darkPalettes, setDarkPalettes] = useState(
+    () => start.darkPalettes || demoDarkPalettes(),
+  );
+  const [darkForegrounds, setDarkForegrounds] = useState(
+    start.darkForegrounds || {},
+  );
+  const [size, setSize] = useState(start.size || 256);
 
-  const [tab, setTab] = useState("usage");
-  const [inspectorTab, setInspectorTab] = useState("animation");
+  const [tab, setTab] = useState(start.tab || "usage");
+  const [inspectorTab, setInspectorTab] = useState(
+    start.inspectorTab || "animation",
+  );
+  const draft = useMemo(
+    () => ({
+      version: 1,
+      icons,
+      target,
+      options,
+      selected,
+      color,
+      previewTheme,
+      darkPalettes,
+      darkForegrounds,
+      size,
+      tab,
+      inspectorTab,
+      animationStates,
+    }),
+    [
+      icons,
+      target,
+      options,
+      selected,
+      color,
+      previewTheme,
+      darkPalettes,
+      darkForegrounds,
+      size,
+      tab,
+      inspectorTab,
+      animationStates,
+    ],
+  );
+  const latestDraft = useRef(draft);
+  latestDraft.current = draft;
+  useEffect(() => {
+    if (storageError) return;
+    let disposed = false;
+    setDraftStatus("saving");
+    const timer = setTimeout(() => {
+      saveDraft(draft).then(
+        () => {
+          if (!disposed) setDraftStatus("saved");
+        },
+        () => {
+          if (!disposed) setDraftStatus("unavailable");
+        },
+      );
+    }, 250);
+    return () => {
+      disposed = true;
+      clearTimeout(timer);
+    };
+  }, [draft]);
+  useEffect(() => {
+    const flush = () => {
+      if (!storageError) saveDraft(latestDraft.current).catch(() => {});
+    };
+    const hidden = () => {
+      if (document.visibilityState === "hidden") flush();
+    };
+    window.addEventListener("pagehide", flush);
+    document.addEventListener("visibilitychange", hidden);
+    return () => {
+      window.removeEventListener("pagehide", flush);
+      document.removeEventListener("visibilitychange", hidden);
+    };
+  }, []);
   const inspectorControls = useRef(null);
   function selectInspectorTab(value) {
     setInspectorTab(value);
@@ -218,6 +383,7 @@ function App() {
     ...variable,
     value: options.palette[current?.name]?.[variable.name] || variable.value,
   }));
+  const hasCurrentColor = usesCurrentColor(artifact?.selected?.svg);
   const paletteCode = variableCss(variables);
   const usageCode =
     single && artifact?.single && current
@@ -380,6 +546,11 @@ function App() {
   }
   function remove(name) {
     setIcons((previous) => previous.filter((icon) => icon.name !== name));
+    setAnimationStates((previous) => {
+      const next = { ...previous };
+      delete next[name];
+      return next;
+    });
   }
   function saveBundle() {
     if (ready)
@@ -397,6 +568,8 @@ function App() {
   }
   function openAnimationExport() {
     selectInspectorTab("animation");
+    updateLayout({ inspectorCollapsed: false });
+    if (matchMedia("(max-width: 1000px)").matches) setMobilePanel("controls");
     requestAnimationFrame(() => {
       document
         .querySelector(".icon-inspector")
@@ -420,30 +593,54 @@ function App() {
           Reset icon
         </button>
       </div>
-      <div className="inspector-body">
-        <div
-          className={`selected-preview theme-preview ${previewTheme === "dark" ? "dark" : ""}`}
-          data-preview-theme={previewTheme}
-          style={{
-            ...activePalette,
-            color:
-              previewTheme === "dark" ? themeExample.foregroundDark : color,
-          }}
-          aria-label={`Live preview of ${current.name}`}
-        >
-          {artifact?.selected && (
-            <div
-              ref={artworkRef}
-              className="selected-artwork"
-              dangerouslySetInnerHTML={{ __html: artifact.selected.svg }}
-            />
-          )}
-          <small>
-            {size} × {artifact?.selected?.height || size} px export · preview
-            fits this canvas
-          </small>
+      <div className="inspector-body" ref={setInspectorNode}>
+        <div className="preview-column">
+          <div
+            className={`selected-preview theme-preview ${previewTheme === "dark" ? "dark" : ""}`}
+            data-preview-theme={previewTheme}
+            style={{
+              ...activePalette,
+              color:
+                previewTheme === "dark" ? themeExample.foregroundDark : color,
+            }}
+            aria-label={`Live preview of ${current.name}`}
+          >
+            <PreviewCanvas key={current.name}>
+              {artifact?.selected && (
+                <div
+                  ref={artworkRef}
+                  className="selected-artwork"
+                  dangerouslySetInnerHTML={{ __html: artifact.selected.svg }}
+                />
+              )}
+            </PreviewCanvas>
+            <small>
+              {size} × {artifact?.selected?.height || size} px export · zoom
+              affects preview only
+            </small>
+          </div>
+          <div id="animation-timeline-slot" />
         </div>
+        <PanelSeparator
+          label="Resize color and animation panel"
+          value={controlsWidth}
+          min={260}
+          max={controlsMax}
+          direction={-1}
+          onChange={(inspectorWidth) => updateLayout({ inspectorWidth })}
+          reset={() => updateLayout({ inspectorWidth: 340 })}
+        />
         <div className="inspector-controls" ref={inspectorControls}>
+          <div className="mobile-sheet-heading">
+            <strong>Icon controls</strong>
+            <button
+              type="button"
+              aria-label="Close icon controls"
+              onClick={() => setMobilePanel(null)}
+            >
+              ×
+            </button>
+          </div>
           <div
             className="inspector-tabs"
             role="tablist"
@@ -635,21 +832,54 @@ function App() {
                 )}
               </>
             )}
-            <label className="theme-foreground">
-              Dark currentColor{" "}
-              <input
-                type="color"
-                aria-label="Dark currentColor"
-                value={themeExample.foregroundDark}
-                onChange={(event) => {
-                  setDarkForegrounds((previous) => ({
-                    ...previous,
-                    [current.name]: event.target.value,
-                  }));
-                  setPreviewTheme("dark");
-                }}
-              />
-            </label>
+            {hasCurrentColor && (
+              <fieldset className="current-color-controls">
+                <legend>currentColor</legend>
+                <p>Color inherited by currentColor fills and strokes.</p>
+                <label className="theme-foreground">
+                  Light currentColor
+                  <input
+                    type="color"
+                    aria-label="Light currentColor"
+                    value={color}
+                    onChange={(event) => {
+                      setColor(event.target.value);
+                      setPreviewTheme("light");
+                    }}
+                  />
+                  <code>{color.toUpperCase()}</code>
+                </label>
+                <label className="theme-foreground">
+                  Dark currentColor
+                  <input
+                    type="color"
+                    aria-label="Dark currentColor"
+                    value={themeExample.foregroundDark}
+                    onChange={(event) => {
+                      setDarkForegrounds((previous) => ({
+                        ...previous,
+                        [current.name]: event.target.value,
+                      }));
+                      setPreviewTheme("dark");
+                    }}
+                  />
+                  <code>{themeExample.foregroundDark.toUpperCase()}</code>
+                </label>
+                <p>
+                  Pick a color to switch the preview background too. Single
+                  SVG/React downloads use the light default; globals.css and
+                  animation ZIPs include both themes. Your SVG keeps
+                  currentColor paints.
+                </p>
+              </fieldset>
+            )}
+            {options.mode === "original" && !hasCurrentColor && (
+              <p>
+                Original fills and strokes keep their source colors. There are
+                no currentColor paints to adjust. Generate CSS variables to edit
+                individual colors.
+              </p>
+            )}
             <p className="theme-help">
               Use <b>globals.css / @theme</b> for light/dark design tokens, then{" "}
               <b>Tailwind</b> for the component and toggle. SVG/React downloads
@@ -705,7 +935,12 @@ function App() {
             hidden={inspectorTab !== "animation"}
           >
             <FillAnimation
-              key={current.name}
+              key={`${current.name}:${sampleRevision}`}
+              initialState={animationStates[current.name]}
+              onStateChange={rememberAnimation}
+              sourceReady={!!ready}
+              onConfigure={openAnimationExport}
+              onShowDownloads={openDownloads}
               active={inspectorTab === "animation"}
               initiallyEnabled={!!current.featured}
               name={current.name}
@@ -735,7 +970,16 @@ function App() {
     </section>
   );
   return (
-    <div className="app-shell">
+    <div
+      className={`app-shell ${focusMode ? "editor-focus" : ""}`}
+      style={{
+        "--package-width": `${packageWidth}px`,
+        "--inspector-width": `${controlsWidth}px`,
+      }}
+      data-package-collapsed={layout.packageCollapsed}
+      data-inspector-collapsed={layout.inspectorCollapsed}
+      data-mobile-panel={mobilePanel || "none"}
+    >
       <header className="header">
         <a
           className="brand"
@@ -799,6 +1043,17 @@ function App() {
             </a>
           </div>
         </section>
+        <p
+          className="draft-status"
+          role="status"
+          data-draft-status={draftStatus}
+        >
+          {draftStatus === "saved"
+            ? "Draft saved in this browser. Your files are not uploaded."
+            : draftStatus === "saving"
+              ? "Saving local draft…"
+              : "Local draft storage is unavailable. Your edits still work in this tab; export a ZIP to keep them."}
+        </p>
         <section
           id="playground"
           className="workspace"
@@ -817,6 +1072,23 @@ function App() {
                 onClick={() => {
                   setIcons(samples.map((icon) => ({ ...icon })));
                   setSelected("orbit");
+                  setAnimationStates((previous) => ({
+                    ...previous,
+                    ...demoAnimationStates(),
+                  }));
+                  setSampleRevision((value) => value + 1);
+                  setDarkPalettes(demoDarkPalettes());
+                  setTarget("single");
+                  setOptions({
+                    ...defaultOptions,
+                    mode: "variables",
+                    allColors: true,
+                    editablePalette: true,
+                    palette: {},
+                    strokeWidths: {},
+                  });
+                  setColor("#245cf3");
+                  setPreviewTheme("light");
                   setQuery("");
                   setNotice("Sample set loaded.");
                 }}
@@ -834,6 +1106,81 @@ function App() {
               </button>
             </div>
           </div>
+          <div className="editor-viewbar" aria-label="Editor view">
+            <div className="desktop-panel-buttons">
+              <button
+                type="button"
+                aria-expanded={!layout.packageCollapsed}
+                onClick={() =>
+                  updateLayout({ packageCollapsed: !layout.packageCollapsed })
+                }
+              >
+                Package settings
+              </button>
+              <button
+                type="button"
+                aria-expanded={!layout.inspectorCollapsed}
+                onClick={() =>
+                  updateLayout({
+                    inspectorCollapsed: !layout.inspectorCollapsed,
+                  })
+                }
+              >
+                Icon controls
+              </button>
+            </div>
+            <div className="mobile-panel-buttons">
+              <button
+                type="button"
+                aria-label="Package controls"
+                aria-expanded={mobilePanel === "package"}
+                onClick={() => openMobilePanel("package")}
+              >
+                Package
+              </button>
+              <button
+                type="button"
+                aria-label="Color controls"
+                aria-expanded={
+                  mobilePanel === "controls" && inspectorTab === "colors"
+                }
+                onClick={() => openMobilePanel("controls", "colors")}
+              >
+                Colors
+              </button>
+              <button
+                type="button"
+                aria-label="Animation controls"
+                aria-expanded={
+                  mobilePanel === "controls" && inspectorTab === "animation"
+                }
+                onClick={() => openMobilePanel("controls", "animation")}
+              >
+                Animation
+              </button>
+            </div>
+            <button type="button" onClick={openDownloads}>
+              Downloads
+            </button>
+            <button
+              type="button"
+              className="editor-focus-toggle"
+              aria-pressed={focusMode}
+              onClick={() => setFocusMode(!focusMode)}
+            >
+              {focusMode ? "Exit editor view" : "Expand editor"}
+            </button>
+            <button
+              type="button"
+              className="reset-editor-layout"
+              onClick={() => {
+                resetLayout();
+                setMobilePanel(null);
+              }}
+            >
+              Reset layout
+            </button>
+          </div>
           <input
             ref={input}
             id="svg-input"
@@ -846,11 +1193,19 @@ function App() {
             disabled={reading}
             onChange={(event) => addFiles(event.target.files)}
           />
-          <div className="workspace-body">
+          <div className="workspace-body" ref={setBodyNode}>
             <aside className="settings">
               <div className="settings-heading">
                 <h3>Make it yours</h3>
                 <span>01 — CONFIGURE</span>
+                <button
+                  type="button"
+                  className="mobile-sheet-close"
+                  aria-label="Close package settings"
+                  onClick={() => setMobilePanel(null)}
+                >
+                  ×
+                </button>
               </div>
               <fieldset className="color-mode output-mode">
                 <legend className="field-label">Output</legend>
@@ -988,6 +1343,14 @@ function App() {
                 </p>
               </div>
             </aside>
+            <PanelSeparator
+              label="Resize package settings panel"
+              value={packageWidth}
+              min={180}
+              max={packageMax}
+              onChange={(packageWidth) => updateLayout({ packageWidth })}
+              reset={() => updateLayout({ packageWidth: 220 })}
+            />
             <div className="stage">
               <div
                 className="featured-samples"
@@ -1002,11 +1365,7 @@ function App() {
                     disabled={!icons.some((icon) => icon.name === sample.name)}
                     onClick={() => setSelected(sample.name)}
                   >
-                    {sample.name === "orbit"
-                      ? "Orbit"
-                      : sample.name === "bloom"
-                        ? "Bloom"
-                        : "Ribbon"}
+                    {sample.label}
                   </button>
                 ))}
               </div>
@@ -1115,21 +1474,6 @@ function App() {
                 </div>
               </details>
               <div className="preview-controls">
-                <label className="color-control">
-                  Preview color{" "}
-                  <span className="color-swatch" style={{ background: color }}>
-                    <input
-                      aria-label="Preview color"
-                      type="color"
-                      value={color}
-                      onChange={(event) => {
-                        setColor(event.target.value);
-                        setPreviewTheme("light");
-                      }}
-                    />
-                  </span>
-                  <code>{color.toUpperCase()}</code>
-                </label>
                 <label className="size-control" htmlFor="preview-size">
                   Size
                   <input
@@ -1164,10 +1508,8 @@ function App() {
                 </label>
               </div>
               <div className="preview-footnote">
-                Preview color changes <code>currentColor</code>; palette pickers
-                change named variables. Single SVG downloads include your chosen
-                currentColor. Fixed fills and gradient stops retain their source
-                colors.
+                Color controls are in the Colors tab. Fixed fills and gradient
+                stops retain their source colors.
               </div>
             </div>
           </div>
@@ -1276,21 +1618,10 @@ function App() {
                 ? `Export ${current?.name || "your icon"} directly. The React component scopes local IDs to each instance.`
                 : "Your sprite, hashed assets, source icons, manifest, and React snippet. All packed up."}
             </p>
-            <div className="animation-export-entry">
-              <button
-                type="button"
-                className="button secondary"
-                disabled={!ready}
-                onClick={openAnimationExport}
-              >
-                <Glyph name="download" size={18} />
-                Open animation export
-              </button>
-              <p>
-                For an animated ZIP: open <b>Fill animation</b>, enable it, then
-                choose <b>Export animation ZIP</b> beside the Timeline.
-              </p>
-            </div>
+            <div
+              id="animation-export-slot"
+              className="animation-export-entry"
+            />
             <button
               className="button primary export-button"
               onClick={() =>
@@ -1387,12 +1718,19 @@ function App() {
           </aside>
         </section>
         <section className="support-note" aria-label="Support the project">
-          <div>
-            <h3>Enjoying the playground?</h3>
-            <p>Your support helps me build more little tools like this.</p>
+          <div className="support-cup" aria-hidden="true">
+            <Glyph name="coffee" size={34} />
+          </div>
+          <div className="support-copy">
+            <span className="support-kicker">You + blue tape + coffee</span>
+            <h3>Coffee keeps the banners away.</h3>
+            <p>
+              Enjoying the editor? Buy me a coffee before I have to wallpaper it
+              with ads.
+            </p>
           </div>
           <a
-            className="button secondary"
+            className="button support-coffee"
             href="https://ko-fi.com/dynation"
             target="_blank"
             rel="noreferrer"
@@ -1604,4 +1942,40 @@ function App() {
   );
 }
 
-createRoot(document.getElementById("root")).render(<App />);
+function Workspace() {
+  const [loaded, setLoaded] = useState(false),
+    [draft, setDraft] = useState(null),
+    [error, setError] = useState("");
+  useEffect(() => {
+    let disposed = false;
+    loadDraft()
+      .then((value) => {
+        if (value)
+          value.icons = value.icons.map((icon) => ({
+            ...icon,
+            content: cleanSvg(icon.content, icon.name, SINGLE_FILE_SIZE),
+          }));
+        if (!disposed) {
+          setDraft(value);
+          setLoaded(true);
+        }
+      })
+      .catch(() => {
+        if (!disposed) {
+          setError("unavailable");
+          setLoaded(true);
+        }
+      });
+    return () => {
+      disposed = true;
+    };
+  }, []);
+  return loaded ? (
+    <App initialDraft={draft} storageError={error} />
+  ) : (
+    <p className="draft-loading" role="status">
+      Opening your local workspace…
+    </p>
+  );
+}
+createRoot(document.getElementById("root")).render(<Workspace />);

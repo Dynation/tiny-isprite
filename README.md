@@ -332,7 +332,7 @@ npm run build:demo
 npm run test:playground
 ```
 
-The browser check requires Chromium (`npx playwright install chromium`). SVG files
+The playground checks require Chromium and Firefox (`npx playwright install chromium firefox`). SVG files
 stay in the browser. Uploaded sources are cleaned before preview/export: scripts,
 embedded HTML/images, animation, style blocks and external references are removed.
 Root presentation attributes are preserved on a group and local IDs are namespaced.

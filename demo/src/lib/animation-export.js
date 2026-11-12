@@ -15,7 +15,8 @@ export function encodeAnimation({
 }) {
   if (!prepared || !["flow", "radial"].includes(mode))
     throw new Error("Prepare an animation before exporting.");
-  const { width, height, labels, field } = prepared;
+  const { width, height, field } = prepared;
+  const labels = prepared.playbackLabels || prepared.labels;
   const match = svg.match(/viewBox="([^"]+)"/);
   const box = match?.[1]
     .trim()
@@ -45,10 +46,11 @@ export function encodeAnimation({
     const group = labels[p];
     const arrival =
       mode === "radial"
-        ? Math.hypot(
+        ? (prepared.radialField?.[p] ??
+          Math.hypot(
             (p % width) - (originX * width) / 100,
             Math.floor(p / width) - (originY * height) / 100,
-          ) / radius
+          ) / radius)
         : field[p];
     view.setUint16(p * 4, group < 0 ? 0 : group + 1, true);
     view.setUint16(
@@ -70,6 +72,18 @@ export function encodeAnimation({
     },
     mode,
     origin: { x: originX, y: originY },
+    ...(prepared.radialField
+      ? {
+          regions: prepared.components.map((region) => ({
+            id: region.id,
+            paint: region.group,
+            track: prepared.regionTracks?.[region.id] ?? region.group,
+            x: region.originX * 100,
+            y: region.originY * 100,
+            customOrigin: region.customOrigin,
+          })),
+        }
+      : {}),
     initialProgress,
     defaultTheme,
     palettes,

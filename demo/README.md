@@ -2,14 +2,15 @@
 
 A static React/Vite app for exploring tiny-isprite and exporting sprites in the
 browser. No upload endpoint, account, analytics or persistent storage is required.
-Refreshing resets the sample set.
+Local drafts restore your edits when browser storage is available.
 
 ## Run
 
 Node 20+: `npm ci`, then `npm run dev`. Production: `npm run build` and
 `npm run preview`. `npm test` checks hashing, bundle contents and validation.
 From the parent library, `npm run test:playground` runs production browser checks
-and reproduces ZIP output with the published generator.
+and reproduces ZIP output with the published generator. Install its browsers with
+`npx playwright install chromium firefox` from the parent library.
 
 ## Shared generation
 
@@ -194,27 +195,139 @@ production React bundles. It blocks all outside requests. Optional local QA may
 set PLAYGROUND_EXPORT_SVG to a personal SVG; that source is not committed.
 `npm run test:playground` includes this consumer test.
 
-Animation ZIP export is available at the top of the animation pane, in the sticky
-Timeline block. The general downloads panel includes Open animation export, which
-opens the correct tab, scrolls to the selected icon and focuses Enable fill
-animation. Its caption explains the remaining enable/export steps.
+Animation ZIP export lives in the shared downloads panel alongside the static
+SVG, React and bundle downloads. It remains available from the Colors tab when
+animation is enabled and the current artwork is ready. How to use your animation
+ZIP is collapsed by default and contains integration instructions and Copy AI
+prompt. Uploaded artwork has a Set up animation helper until animation is enabled.
+
+### Editor workspace
+
+The editor uses the available page width. On desktop, drag the vertical separators
+to resize package settings and icon controls; the canvas takes the remaining
+space. Separators also support arrow keys (Shift for larger steps), Home/End, and
+double-click to reset. Package settings and Icon controls can be collapsed without
+unmounting the editor or losing animation settings. Reset layout restores defaults.
+Panel widths and collapsed states are saved locally when storage is available.
+
+Expand editor fills the viewport; Escape exits. Downloads leaves the expanded view
+and scrolls to all downloads. The timeline stays directly below the artwork,
+independent of the controls pane's scroll position. On screens up to 1000px wide,
+Package, Colors and Animation open compact bottom sheets; the preview and timeline
+remain above the controls on portrait screens. Close or Escape dismisses the sheet.
+Short landscape screens prioritize scrollable controls. The regional timing editor
+also uses a bottom sheet on phones.
+
+Preview zoom is independent of export dimensions. The canvas toolbar offers
+minus/plus (100–1600%), Fit, and a paw-shaped Pan tool. Ctrl/Command + wheel or trackpad
+pinch zooms around the pointer inside the canvas. Scrollbars, Pan-tool drag,
+Space + drag with canvas focus, and middle-button drag move around enlarged
+artwork. Touch users can scroll the enlarged canvas or enable the Pan tool to drag it.
+Panning suppresses region-selection/origin-placement clicks. The artwork and
+region overlay share one scroll plane, so SVG screen coordinates account for
+zoom and scroll. Fit returns to the complete artwork. Switching icons resets
+the view; palette, timing and tab edits preserve it. Zoom is not baked into SVGs,
+React components or animation exports.
+
+`node test/preview-zoom.mjs` checks selection of 1–2px regions at high zoom,
+origin coordinates after scrolling, Pan/Space dragging over the portal overlay,
+scoped wheel zoom, Fit, mobile controls and byte-identical static SVG downloads.
+
+`node test/editor-layout.mjs` checks pointer and keyboard resizing, saved layout,
+collapse/reset, expanded-view recovery, ZIP download from Colors, and mobile
+preview/timeline visibility at 390px and 320px. It is part of test:playground.
+
+### Firefox preview rendering
+
+The live preview uses a stable native SVG mask, matching the working ZIP player's
+rendering approach. Updating CSS mask-image to a new PNG URL on every frame caused
+intermittent completely blank frames in Firefox. The preview now updates the image
+inside one SVG mask while keeping its reference stable. No user-agent detection is
+needed, and the portable player and exported animation format are unchanged.
+
+The temporary mask wraps only the displayed artwork. ViewBox, preserveAspectRatio,
+letterboxing and the canonical region grid determine mask coordinates. Colors,
+disabling animation and regeneration remove the wrapper/defs and restore the
+original displayed nodes. Exports continue to use the generated SVG source, so
+preview mask nodes never enter downloaded artwork.
+
+`npm run test:firefox-animation` performs more than 200 mask updates in Firefox and
+Chromium and counts visible red pixels in captured frames to detect blanking or
+large backward jumps. It checks the unchanged portable player alongside preview,
+plus actual editor mask reuse and cleanup. Frame statistics are saved under
+`.release-artifacts/firefox-animation/`. The test is also part of test:playground;
+CI installs both browsers.
+
+### Guided animation editing
+
+Open Fill animation and choose **Show me how** above Enable fill animation.
+The short route highlights real controls with an arrow and a popover:
+
+1. Enable fill animation (already enabled on featured examples).
+2. Choose the fill effect and shared origin.
+3. Start with per-color Start, Duration and End fill. Region overrides keep their
+   own settings. Start/Duration use 0.01-second steps.
+4. Play or scrub the timeline. Read the current seconds and use them for the next
+   color/region's Start; this is time from timeline zero. Orbits can follow one
+   another or overlap.
+5. **Perfectionism?** Regions under 10 analysis samples often make little visible
+   difference. At 1–2 points there is little room for a spreading fill; these may
+   be SVG leftovers or rasterization specks. Samples are analysis-grid points,
+   not a measure of original SVG detail. Use the preview to decide what matters.
+6. **Next** skips individual-region editing and goes straight to ZIP export.
+
+At step five, **Perfectionism mode** opens the optional detour: enable Separate
+region origins, choose a region, edit its X/Y and timing in the popover, then place
+its inlet on the artwork. That route has eleven steps. The same fields appear in
+a bottom sheet on phones. Tiny regions remain selectable and keep their original
+settings; this feature does not delete, suppress, retime or zero them. The region
+list marks entries under 10 samples as tiny details and uses singular sample for
+one analysis point.
+
+Back, Next, Skip tour, Done and Escape are available; Go to control moves keyboard
+focus to the highlighted element. Controls stay interactive. Next at the fork
+always means the short route, even after returning with Back from the advanced
+branch. Back from export reopens the controls. Done/Skip/Escape cancel unfinished
+point placement; completed edits remain. Export is still an explicit button click.
+Tour state is transient and is not saved into local drafts. The complete JS/React
+animation is in Export animation ZIP; separate SVG/React downloads stay static.
+
+`test/animation-tour.mjs` checks both routes at 1440/390/320px, branch navigation,
+real regional timing/origin edits in ZIP exports, and Done/Skip/Escape recovery.
 
 ### First visit and page theme
 
 The playground starts with the original multicolor Orbit artwork in Single icon
 mode at 256px. Generate CSS variables and Include multicolor fills and strokes
-are enabled. Fill animation is ready to play for the three featured samples;
-uploaded artwork still requires opting in. Orbit, Bloom and Ribbon are original
-MIT-licensed demo artwork. The full sprite collection is available in the
-collapsed More icons & sprite collection panel below the selected editor.
+are enabled. Featured examples are Orbit, Ribbon, Check circle, Code, Sun and
+Photograph, using the maintainer's six exported animation ZIPs. Their paint and
+regional schedules, inlet coordinates, light/dark palettes and edited artwork are
+restored as editable controls, rather than approximated with generic delays.
+Orbit plays once on a fresh visit. Each untouched example plays once when first
+selected; saved edits restore paused. Reduced motion shows the completed artwork.
+Uploaded artwork still requires opting in. Existing local drafts take precedence;
+Load samples explicitly restores the authored examples and standard single-icon
+options. Bloom and the other basic icons remain in the collapsed sprite library.
+
+`src/data/demo-animations.json` contains declarative artwork/settings, ZIP SHA-256
+provenance and run-length encoded regional topology. ZIP JavaScript is parsed as
+JSON during import, never executed. The bundled arrival/player code is not copied;
+the editor rebuilds its own fields and uses overlap matching to retain each
+region's timing/origin. Topology is bound once to the correct generated geometry.
+`test/demo-presets.mjs` compares every region's timing, origin and both palettes
+with actual ZIP re-exports for all six examples, and tests autoplay, reduced
+motion, saved edits and explicit reset. Orbit, Ribbon and Bloom are original MIT
+artwork; Photograph is the maintainer-supplied `photograph-svgrepo-com` asset and
+retains its upstream artwork license, as described in animation exports.
+
 
 The whole page starts dark. The header theme button saves the page theme in
 localStorage when available; the editor works when storage is blocked. This is
 independent of the artwork's Light preview / Dark preview palette switch.
 Downloads precede the React/Tailwind guides, package installation is near the end,
 and the optional Ko-fi link follows exports without a popup or blocking step.
-The current Sites address remains the preview location; deployment does not
-change the audience or enable public access.
+The public editor is deployed on GitHub Pages; the earlier Sites preview is
+a separate build.
 
 ### GitHub Pages
 
@@ -238,3 +351,70 @@ Publish only `demo/dist/`, with `.nojekyll`, to `gh-pages`. Keep previously
 published hashed assets when updating, so already open tabs retain their imports.
 The default base remains `/` for the separate private Sites preview. The home
 link and favicon follow the configured base. No analytics provider is configured.
+
+### Independent region origins
+
+Enable **Separate region origins** in Fill animation. The transparent preview
+overlay selects painted regions without changing the source SVG. Select a region
+by clicking its painted area or using the Selected region list. Choosing a different
+region from the dropdown opens its settings popover immediately, including tiny
+regions; no artwork click or double-click is needed. Choose **Place
+origin on artwork**, then click a point, or enter Region X/Y percentages in the point's popover. The pin
+shows the nearest painted sample used as the actual inlet. **Use shared origin** removes only that region's override.
+
+Each disconnected visible region of the same paint can use a different origin.
+Start and Duration use 0.01-second steps in both the paint panel and regional
+popover, on desktop and mobile. Durations may be as short as 0.01 seconds; drafts,
+flow/CSS previews and the bundled portable player preserve those values.
+
+Paint timing supplies shared defaults. Double-click a region or its pin, or choose
+**Edit region settings**, to open a compact nonmodal popover with that region's
+X/Y, Start (s), Duration (s) and End fill (%). Start is an absolute delay from the
+beginning of the timeline. Editing a timing field overrides only that field;
+**Use color timing** restores inheritance. Coordinates are no longer repeated in
+the main panel. Escape/Close restores focus to the edit button; outside clicks
+close the popover, and the explicit button supports touch and keyboard use. Flow and radial ZIP exports bake
+these origins into arrival maps; no extra processing is added to the portable
+player. Optional `regions` metadata records effective origins without changing
+the map format or breaking existing schema-v1 players. CSS-only radial export
+still represents the whole-icon shortcut.
+
+This mode uses a fixed artwork-aspect analysis grid, with an aligned SVG overlay
+and native SVG mask coordinates to account for viewport letterboxing. Region
+identities and coordinates survive viewport/export-size changes and palette edits.
+Changes to geometry or paint grouping can temporarily leave overrides unapplied; their previous configurations are retained. Regions are connected
+samples on the existing 320px analysis grid, not semantic SVG path objects:
+touching shapes can form one region and subpixel gaps may be indistinguishable.
+The overlay/highlight/pins never enter exported artwork.
+
+Region timing exports compile into ordinary positional timing tracks and remap
+the per-pixel track indices. Multiple tracks may retain the same CSS-variable
+name because they represent separate regions of the same paint. Region metadata
+links each region to its compiled track. Inherited tracks with no remaining
+regions are omitted so they do not extend playback. Existing schema-v1 players
+need no change. Export remains limited to 4095 effective timing tracks; an
+explicit error disables play/export if that limit is exceeded.
+
+### Local workspace drafts
+
+The editor saves its workspace in IndexedDB in the current browser: cleaned SVG
+sources, selected icon/output, palettes, line width, export size, active tabs and
+per-icon animation settings. Switching icons restores that icon's animation;
+Colors/Fill animation switches pause rendering without discarding settings.
+Reload restores the workspace and paused timeline position. Playback frames,
+canvases and prepared arrival maps are rebuilt instead of being stored.
+
+A local-draft status reports saving/saved/unavailable. Saves are batched and
+serialized, with an extra flush when the page is hidden. Blocked or exhausted
+browser storage does not stop editing, and failed/unsupported restores are not
+overwritten with the sample defaults. Drafts are local to this browser and site
+origin; clearing site data removes them. Exported ZIPs remain the portable backup.
+
+Stroke-width and palette edits no longer invalidate region schedules. Region
+identity ignores presentation-only line-width wrappers and paint fallback values;
+painted overlap maps edited regions onto rebuilt topology rather than reusing
+scan indices. Splits inherit the previous region's overrides. Merged or missing
+regions retain unapplied records, shown by a notice, so reverting the edit can
+recover their settings. Actual geometry changes keep earlier configurations in
+the draft instead of deleting them. New explicit edits take precedence when
+matching stored records.

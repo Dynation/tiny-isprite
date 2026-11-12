@@ -100,7 +100,7 @@ try {
     .getByLabel(`Dark color ${paints[0]}`, { exact: true })
     .fill("#fb923c");
   await page
-    .getByRole("button", { name: "Open animation export", exact: true })
+    .getByRole("button", { name: "Set up animation", exact: true })
     .click();
   assert.equal(
     await page
@@ -120,6 +120,24 @@ try {
       "prepared export maps",
     );
   await ready();
+  await page
+    .getByRole("checkbox", { name: "Separate region origins", exact: true })
+    .check();
+  await ready();
+  await page
+    .getByRole("button", { name: "Edit region settings", exact: true })
+    .click();
+  await page.getByLabel("Region origin X", { exact: true }).fill("12");
+  await page.getByLabel("Region origin Y", { exact: true }).fill("18");
+  await page.getByLabel("Region start", { exact: true }).fill("0.67");
+  await page.getByLabel("Region duration", { exact: true }).fill("3.03");
+  await page.getByLabel("Region end fill", { exact: true }).fill("85");
+  await page.getByLabel("Selected region", { exact: true }).selectOption("1");
+  await page
+    .getByRole("dialog", { name: "Region 2 settings", exact: true })
+    .waitFor();
+  await page.getByLabel("Region origin X", { exact: true }).fill("82");
+  await page.getByLabel("Region origin Y", { exact: true }).fill("76");
   await page
     .getByLabel(`Animation duration ${paints[0]}`, { exact: true })
     .fill("2.4");
@@ -144,22 +162,39 @@ try {
   );
   assert.ok(stats);
   await page.evaluate(() => {
-    Object.defineProperty(navigator, "clipboard", { configurable: true, value: {
-      writeText: async (text) => { window.copiedAnimationPrompt = text; },
-    } });
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: async (text) => {
+          window.copiedAnimationPrompt = text;
+        },
+      },
+    });
   });
-  await page.getByRole("button", { name: "Copy AI prompt", exact: true }).click();
+  await page.locator(".animation-integration > summary").click();
+  await page
+    .getByRole("button", { name: "Copy AI prompt", exact: true })
+    .click();
   const copiedPrompt = await page.evaluate(() => window.copiedAnimationPrompt);
   assert.match(copiedPrompt, /text only/);
   assert.match(copiedPrompt, /local path/);
   await page.evaluate(() => {
-    navigator.clipboard.writeText = async () => { throw new Error("denied"); };
+    navigator.clipboard.writeText = async () => {
+      throw new Error("denied");
+    };
   });
-  await page.getByRole("button", { name: "Copy AI prompt", exact: true }).click();
-  const manualPrompt = page.getByRole("textbox", { name: "AI integration prompt" });
+  await page
+    .getByRole("button", { name: "Copy AI prompt", exact: true })
+    .click();
+  const manualPrompt = page.getByRole("textbox", {
+    name: "AI integration prompt",
+  });
   await manualPrompt.waitFor({ state: "visible" });
   assert.equal(await manualPrompt.inputValue(), copiedPrompt);
-  assert.match(await page.locator(".animation-integration").textContent(), /Clipboard unavailable/);
+  assert.match(
+    await page.locator(".animation-integration").textContent(),
+    /Clipboard unavailable/,
+  );
   const event = page.waitForEvent("download");
   await page
     .getByRole("button", { name: "Export animation ZIP", exact: true })
@@ -175,17 +210,27 @@ try {
   assert.equal(new TextDecoder().decode(files["AI-PROMPT.txt"]), copiedPrompt);
   const readme = new TextDecoder().decode(files["README.md"]);
   const htmlExample = readme.match(/```html\n([\s\S]*?)```/)[1];
-  await writeFile(path.join(site, "readme-example.html"), htmlExample.replace(
-    "player.replay();", "player.replay(); window.readmePlayer = player;",
-  ));
+  await writeFile(
+    path.join(site, "readme-example.html"),
+    htmlExample.replace(
+      "player.replay();",
+      "player.replay(); window.readmePlayer = player;",
+    ),
+  );
   const exported = (
     await import(
       "file://" + path.join(site, "animation-data.js") + "?v=" + Date.now()
     )
   ).default;
   assert.equal(exported.initialProgress, 45);
-  assert.equal(exported.tracks[0].duration, 2.4);
-  assert.equal(exported.tracks[1].start, 0.4);
+  assert.equal(exported.regions[0].x, 12);
+  assert.equal(exported.regions[1].x, 82);
+  assert.ok(
+    exported.regions[0].customOrigin && exported.regions[1].customOrigin,
+  );
+  assert.equal(exported.tracks[exported.regions[0].track].start, 0.67);
+  assert.equal(exported.tracks[exported.regions[0].track].duration, 3.03);
+  assert.equal(exported.tracks[exported.regions[0].track].end, 85);
   assert.equal(exported.palettes.dark[paints[0]], "#fb923c");
   // Serve only extracted ZIP contents on a different origin. The generator is not a dependency.
   consumer = http.createServer(async (req, res) => {
@@ -223,12 +268,21 @@ try {
   readmePage.on("pageerror", (error) => readmeErrors.push(error.message));
   await readmePage.goto(`${consumerUrl}/readme-example.html`);
   await readmePage.locator("#icon svg").waitFor();
-  await readmePage.waitForFunction(() => document.querySelector("#icon svg").getBoundingClientRect().width > 0);
-  await readmePage.waitForFunction(() => window.readmePlayer.getState().progress > 0);
-  assert.equal(await readmePage.evaluate(() => window.readmePlayer.getState().destroyed), false);
+  await readmePage.waitForFunction(
+    () => document.querySelector("#icon svg").getBoundingClientRect().width > 0,
+  );
+  await readmePage.waitForFunction(
+    () => window.readmePlayer.getState().progress > 0,
+  );
+  assert.equal(
+    await readmePage.evaluate(() => window.readmePlayer.getState().destroyed),
+    false,
+  );
   assert.deepEqual(readmeErrors, []);
   await readmePage.close();
-  console.log("PASS copied AI prompt, clipboard-denied manual fallback, ZIP prompt parity and executable README HTML example");
+  console.log(
+    "PASS copied AI prompt, clipboard-denied manual fallback, ZIP prompt parity and executable README HTML example",
+  );
   const consumerContext = await browser.newContext({
     viewport: { width: 1280, height: 1000 },
   });
@@ -388,18 +442,29 @@ try {
   assert.notEqual(cleanup.restored, "#22c55e");
   assert.equal(cleanup.placeholder, "original placeholder");
   // Compile and render the exact README React example with only its import path adjusted.
-  const readmeReact = readme.match(/```jsx\n([\s\S]*?)```/)[1]
+  const readmeReact = readme
+    .match(/```jsx\n([\s\S]*?)```/)[1]
     .replace("./components/animation/AnimatedIcon.jsx", "./AnimatedIcon.jsx");
-  await writeFile(path.join(site, "readme-react-entry.jsx"),
+  await writeFile(
+    path.join(site, "readme-react-entry.jsx"),
     "import React from 'react'; import { createRoot } from 'react-dom/client';\n" +
-    readmeReact + "\ncreateRoot(document.getElementById('root')).render(<Example />);");
+      readmeReact +
+      "\ncreateRoot(document.getElementById('root')).render(<Example />);",
+  );
   await build({
-    entryPoints: [path.join(site, "readme-react-entry.jsx")], bundle: true,
-    format: "esm", platform: "browser", outfile: path.join(site, "readme-react.js"),
-    nodePaths: [path.join(repo, "node_modules")], jsx: "automatic", logLevel: "silent",
+    entryPoints: [path.join(site, "readme-react-entry.jsx")],
+    bundle: true,
+    format: "esm",
+    platform: "browser",
+    outfile: path.join(site, "readme-react.js"),
+    nodePaths: [path.join(repo, "node_modules")],
+    jsx: "automatic",
+    logLevel: "silent",
   });
-  await writeFile(path.join(site, "readme-react.html"),
-    '<!doctype html><div id="root"></div><script type="module" src="./readme-react.js"></script>');
+  await writeFile(
+    path.join(site, "readme-react.html"),
+    '<!doctype html><div id="root"></div><script type="module" src="./readme-react.js"></script>',
+  );
   const readmeReactPage = await consumerContext.newPage();
   readmeReactPage.on("pageerror", (error) => errors.push(error.message));
   await readmeReactPage.goto(consumerUrl + "/readme-react.html");

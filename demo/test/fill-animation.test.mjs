@@ -53,3 +53,70 @@ test("CSS-only export names its radial scope and respects reduced motion", () =>
   assert.match(css, /fill-reveal 2.4s/);
   assert.match(css, /prefers-reduced-motion/);
 });
+
+test("same-paint islands accept independent origins without changing other regions", () => {
+  const labels = Int32Array.from([0, 0, 0, -1, 0, 0, 0]);
+  const base = buildDistanceField(labels, 7, 1, 0, 0, {});
+  const custom = buildDistanceField(labels, 7, 1, 0, 0, { 0: { x: 1, y: 0 } });
+  assert.deepEqual([...custom.regionMap], [0, 0, 0, -1, 1, 1, 1]);
+  assert.equal(base.components[0].seed, 0);
+  assert.equal(custom.components[0].seed, 2);
+  assert.equal(custom.field[2], 0);
+  assert.equal(custom.field[0], 1);
+  assert.equal(custom.components[1].seed, base.components[1].seed);
+  assert.deepEqual([...custom.field.slice(4)], [...base.field.slice(4)]);
+  assert.deepEqual(
+    [...custom.radialField.slice(4)],
+    [...base.radialField.slice(4)],
+  );
+  assert.ok(custom.radialField[2] > base.radialField[2]);
+  assert.equal(custom.components[0].customOrigin, true);
+  assert.equal(custom.components[1].customOrigin, false);
+});
+
+test("region timing compiles independent schedules of the same color without mutating paint tracks", async () => {
+  const { buildRegionTiming } = await import("../src/lib/fill-animation.js");
+  const labels = Int32Array.from([0, 0, -1, 0, 0]);
+  const prepared = { labels, ...buildDistanceField(labels, 5, 1, 0, 0, {}) };
+  const tracks = [{ name: "--red", start: 0, duration: 2, end: 100 }];
+  const compiled = buildRegionTiming(prepared, tracks, {
+    0: { start: 0.5, duration: 1, end: 60 },
+  });
+  assert.deepEqual([...compiled.labels], [1, 1, -1, 0, 0]);
+  assert.deepEqual(compiled.regionTracks, [1, 0]);
+  assert.equal(compiled.tracks[1].name, "--red");
+  assert.equal(trackProgress(0.25, compiled.tracks[1]), 0);
+  assert.equal(trackProgress(0.25, compiled.tracks[0]), 0.125);
+  assert.equal(trackProgress(5, compiled.tracks[1]), 0.6);
+  assert.equal(tracks[0].end, 100);
+  const all = buildRegionTiming(
+    prepared,
+    [{ ...tracks[0], start: 30, duration: 30 }],
+    { 0: { start: 0, duration: 1 }, 1: { start: 0, duration: 2 } },
+  );
+  assert.equal(Math.max(...all.tracks.map((t) => t.start + t.duration)), 2);
+  assert.equal(buildRegionTiming(prepared, tracks, {}).labels, labels);
+  const huge = {
+    labels,
+    components: Array.from({ length: 4096 }, (_, id) => ({ id, group: 0 })),
+  };
+  const overrides = Object.fromEntries(
+    huge.components.map((c) => [c.id, { start: 1 }]),
+  );
+  assert.match(buildRegionTiming(huge, tracks, overrides).error, /4095/);
+});
+
+test("hundredth-second timing survives regional compilation and drives short previews", async () => {
+  const { buildRegionTiming } = await import("../src/lib/fill-animation.js");
+  const labels = Int32Array.from([0, 0]);
+  const prepared = { labels, ...buildDistanceField(labels, 2, 1, 0, 0, {}) };
+  const compiled = buildRegionTiming(
+    prepared,
+    [{ name: "--red", start: 0, duration: 2, end: 100 }],
+    { 0: { start: 0.03, duration: 0.01, end: 100 } },
+  );
+  assert.equal(compiled.tracks[0].start, 0.03);
+  assert.equal(compiled.tracks[0].duration, 0.01);
+  assert.ok(Math.abs(trackProgress(0.035, compiled.tracks[0]) - 0.5) < 1e-9);
+  assert.match(radialCss(50, 50, 0.01), /fill-reveal 0.01s/);
+});

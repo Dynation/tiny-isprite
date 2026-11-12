@@ -1,3 +1,4 @@
+import { samples } from "../demo/src/samples.js";
 import { transformSync } from "esbuild";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -132,15 +133,7 @@ try {
     ),
     false,
   );
-  assert.ok(
-    await page
-      .locator(".stage")
-      .evaluate(
-        (el) =>
-          el.getBoundingClientRect().top <
-          document.querySelector(".settings").getBoundingClientRect().top,
-      ),
-  );
+  assert.equal(await page.locator(".settings").isVisible(), false);
   await page.screenshot({
     path: path.join(artifacts, "launch-mobile-dark.png"),
     fullPage: true,
@@ -172,13 +165,41 @@ try {
         .then((c) => c >= 3),
     "featured palette",
   );
-  await page.getByRole("button", { name: "Bloom", exact: true }).click();
+  const orbitColor = "--all-orbit-stroke-1";
+  await page.getByLabel(`Color ${orbitColor}`, { exact: true }).fill("#24b38c");
+  await page.getByRole("tab", { name: "Fill animation", exact: true }).click();
+  const paintDot = page.getByRole("img", {
+    name: new RegExp(`^Current color ${orbitColor}:`),
+  });
+  assert.equal(
+    await paintDot.evaluate((el) => getComputedStyle(el).backgroundColor),
+    "rgb(36, 179, 140)",
+  );
+  await page.getByRole("tab", { name: "Colors", exact: true }).click();
+  await page
+    .getByLabel(`Dark color ${orbitColor}`, { exact: true })
+    .fill("#ff8712");
+  await page.getByRole("tab", { name: "Fill animation", exact: true }).click();
+  assert.equal(
+    await paintDot.evaluate((el) => getComputedStyle(el).backgroundColor),
+    "rgb(255, 135, 18)",
+  );
+  assert.equal(await paintDot.getAttribute("title"), "#ff8712");
+  await page.getByRole("tab", { name: "Colors", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Light preview", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Reset icon", exact: true }).click();
+  console.log(
+    "PASS animation color dots follow edited light and dark artwork palettes",
+  );
+  await page.getByRole("button", { name: "Ribbon", exact: true }).click();
   await poll(
     () =>
       page
         .locator(".icon-inspector h3")
         .textContent()
-        .then((n) => n === "bloom"),
+        .then((n) => n === "ribbon"),
     "featured artwork choice",
   );
   await page.getByRole("button", { name: "Orbit", exact: true }).click();
@@ -198,14 +219,14 @@ try {
   const ready = () =>
     poll(() => exportButton.isEnabled(), "generated artifact");
   await ready();
-  assert.equal(await page.locator(".icon-card").count(), 15);
+  assert.equal(await page.locator(".icon-card").count(), samples.length);
   await page.waitForFunction(() =>
     [...document.querySelectorAll(".icon-card use")].every(
       (element) => element.getBBox().width > 0,
     ),
   );
   console.log(
-    "PASS actual React component renders all fifteen external SVG symbols",
+    "PASS actual React component renders every external SVG sample symbol",
   );
   await page.getByRole("textbox", { name: "Search icons" }).fill("heart");
   assert.equal(await page.locator(".icon-card").count(), 1);
@@ -226,7 +247,13 @@ try {
   );
   await page.getByLabel("Asset path", { exact: true }).fill("/assets/");
   await ready();
-  await page.getByLabel("Preview color", { exact: true }).fill("#d83868");
+  await page.getByRole("tab", { name: "Colors", exact: true }).click();
+  await page
+    .locator(".icon-card")
+    .filter({ hasText: /^heart$/ })
+    .click();
+  await ready();
+  await page.getByLabel("Light currentColor", { exact: true }).fill("#d83868");
   await page.getByRole("slider", { name: /Size/ }).focus();
   await page.getByRole("slider", { name: /Size/ }).press("End");
   assert.ok(
@@ -265,7 +292,8 @@ try {
   ]);
   await ready();
   await poll(
-    async () => (await page.locator(".icon-card").count()) === 17,
+    async () =>
+      (await page.locator(".icon-card").count()) === samples.length + 2,
     "SVG uploads",
   );
   await page.getByLabel("Upload SVG files", { exact: true }).setInputFiles({
@@ -277,7 +305,8 @@ try {
   });
   await ready();
   await poll(
-    async () => (await page.locator(".icon-card").count()) === 18,
+    async () =>
+      (await page.locator(".icon-card").count()) === samples.length + 3,
     "duplicate name upload",
   );
   assert.ok(
@@ -295,7 +324,7 @@ try {
       (await page.locator(".notice").textContent()).includes("Not a valid SVG"),
     "invalid SVG rejection",
   );
-  assert.equal(await page.locator(".icon-card").count(), 18);
+  assert.equal(await page.locator(".icon-card").count(), samples.length + 3);
   const transfer = await page.evaluateHandle(() => {
     const data = new DataTransfer();
     data.items.add(
@@ -311,7 +340,8 @@ try {
     .locator(".icon-canvas")
     .dispatchEvent("drop", { dataTransfer: transfer });
   await poll(
-    async () => (await page.locator(".icon-card").count()) === 19,
+    async () =>
+      (await page.locator(".icon-card").count()) === samples.length + 4,
     "drag and drop upload",
   );
   await ready();
@@ -901,8 +931,10 @@ try {
     "empty flow",
   );
   assert.match(
-    await targetSvg.evaluate((el) => el.style.maskImage),
-    /data:image\/png/,
+    await targetSvg
+      .locator(":scope > [data-preview-content]")
+      .getAttribute("mask"),
+    /url\(#isprite-preview-/,
   );
   await page
     .locator(".icon-inspector")
@@ -926,7 +958,7 @@ try {
       .locator(".fill-animation")
       .evaluate(
         (el) =>
-          el
+          document
             .querySelector(".animation-playback")
             .compareDocumentPosition(el.querySelector(".animation-controls")) &
           Node.DOCUMENT_POSITION_FOLLOWING,
@@ -997,7 +1029,7 @@ try {
     "PASS Colors/Fill animation tabs preserve state; timeline precedes effects and stays visible with artwork on desktop/mobile",
   );
   const animationGroups = await page
-    .locator(".animation-tracks fieldset > code")
+    .locator(".animation-tracks fieldset code")
     .allTextContents();
   await page
     .getByLabel(`Animation start ${animationGroups[1]}`, { exact: true })
@@ -1010,8 +1042,10 @@ try {
     .fill("55");
   await animationProgress.fill("100");
   assert.match(
-    await targetSvg.evaluate((el) => el.style.maskImage),
-    /data:image\/png/,
+    await targetSvg
+      .locator(":scope > [data-preview-content]")
+      .getAttribute("mask"),
+    /url\(#isprite-preview-/,
   );
   await page
     .getByRole("combobox", { name: "Fill effect", exact: true })
@@ -1040,7 +1074,9 @@ try {
   assert.equal(await animationProgress.inputValue(), "100");
   await poll(
     async () =>
-      (await targetSvg.evaluate((el) => el.style.maskImage)) === "none",
+      (await targetSvg
+        .locator(":scope > [data-preview-content]")
+        .getAttribute("mask")) === null,
     "reduced motion complete vector",
   );
   await page.emulateMedia({ reducedMotion: "no-preference" });
@@ -1221,8 +1257,9 @@ try {
   assert.equal(await page.locator(".icon-card").count(), 0);
   assert.equal(await exportButton.isEnabled(), false);
   await page.getByRole("button", { name: "Load samples", exact: true }).click();
+  await page.getByRole("radio", { name: "Sprite", exact: true }).check();
   await ready();
-  assert.equal(await page.locator(".icon-card").count(), 15);
+  assert.equal(await page.locator(".icon-card").count(), samples.length);
   console.log(
     "PASS invalid options cannot export stale artifacts; empty-state and sample recovery",
   );
