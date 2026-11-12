@@ -156,7 +156,7 @@ export function buildRegionTiming(prepared, tracks, overrides = {}) {
       ...base,
       name: base.name,
       start: bounded("start", 0, 30),
-      duration: bounded("duration", 0.1, 30),
+      duration: bounded("duration", 0.01, 30),
       end: bounded("end", 0, 100),
     });
   }
@@ -172,14 +172,14 @@ export function buildRegionTiming(prepared, tracks, overrides = {}) {
 
 export function trackProgress(time, track) {
   return (
-    clamp((time - track.start) / Math.max(0.1, track.duration), 0, 1) *
+    clamp((time - track.start) / Math.max(0.01, track.duration), 0, 1) *
     clamp(track.end / 100, 0, 1)
   );
 }
 export function radialCss(originX, originY, duration) {
   const x = clamp(Number(originX) || 0, 0, 100),
     y = clamp(Number(originY) || 0, 0, 100);
-  const seconds = clamp(Number(duration) || 1.8, 0.1, 30);
+  const seconds = clamp(Number(duration) || 1.8, 0.01, 30);
   return `/* Whole-icon radial reveal. This circle does not travel around holes.\n   Apply className="fill-reveal" to ExampleIcon, or a wrapper around Icon.\n   No changes to the SVG paths are needed. */\n.fill-reveal {\n  animation: fill-reveal ${seconds}s linear both;\n}\n@keyframes fill-reveal {\n  from { clip-path: circle(0% at ${x}% ${y}%); }\n  to   { clip-path: circle(150% at ${x}% ${y}%); }\n}\n@media (prefers-reduced-motion: reduce) {\n  .fill-reveal { animation: none; clip-path: none; }\n}\n/* Shape-following flow uses a computed distance field in JavaScript.\n   Per-paint timing in the demo is not included in this CSS-only shortcut. */\n`;
 }
 

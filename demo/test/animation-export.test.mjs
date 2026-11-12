@@ -165,3 +165,14 @@ test("portable export remaps same-paint regions to independent timing tracks", a
   assert.equal(trackProgress(0.5, data.tracks[1]), 0);
   assert.equal(trackProgress(10, data.tracks[1]), 0.6);
 });
+
+test("portable timing preserves hundredths and rejects zero-length tracks", () => {
+  const data = fixture();
+  data.tracks[0] = { ...data.tracks[0], start: 0.12, duration: 0.01 };
+  data.tracks[1] = { ...data.tracks[1], start: 0.13, duration: 0.01 };
+  const restored = JSON.parse(JSON.stringify(data));
+  assert.equal(restored.tracks[0].duration, 0.01);
+  assert.ok(Math.abs(decodeAnimation(restored).duration - 0.14) < 1e-9);
+  restored.tracks[0].duration = 0;
+  assert.throws(() => decodeAnimation(restored), /Invalid paint timing/);
+});

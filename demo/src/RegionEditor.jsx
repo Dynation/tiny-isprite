@@ -155,7 +155,7 @@ export function RegionEditor({
             type="number"
             min="0"
             max="30"
-            step="0.1"
+            step="0.01"
             value={timing.start}
             onChange={(event) => onTiming("start", number(event, 0, 30))}
           />
@@ -165,11 +165,11 @@ export function RegionEditor({
           <input
             aria-label="Region duration"
             type="number"
-            min="0.1"
+            min="0.01"
             max="30"
-            step="0.1"
+            step="0.01"
             value={timing.duration}
-            onChange={(event) => onTiming("duration", number(event, 0.1, 30))}
+            onChange={(event) => onTiming("duration", number(event, 0.01, 30))}
           />
         </label>
         <label>

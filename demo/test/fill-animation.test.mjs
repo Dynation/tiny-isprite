@@ -105,3 +105,18 @@ test("region timing compiles independent schedules of the same color without mut
   );
   assert.match(buildRegionTiming(huge, tracks, overrides).error, /4095/);
 });
+
+test("hundredth-second timing survives regional compilation and drives short previews", async () => {
+  const { buildRegionTiming } = await import("../src/lib/fill-animation.js");
+  const labels = Int32Array.from([0, 0]);
+  const prepared = { labels, ...buildDistanceField(labels, 2, 1, 0, 0, {}) };
+  const compiled = buildRegionTiming(
+    prepared,
+    [{ name: "--red", start: 0, duration: 2, end: 100 }],
+    { 0: { start: 0.03, duration: 0.01, end: 100 } },
+  );
+  assert.equal(compiled.tracks[0].start, 0.03);
+  assert.equal(compiled.tracks[0].duration, 0.01);
+  assert.ok(Math.abs(trackProgress(0.035, compiled.tracks[0]) - 0.5) < 1e-9);
+  assert.match(radialCss(50, 50, 0.01), /fill-reveal 0.01s/);
+});

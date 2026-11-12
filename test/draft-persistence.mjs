@@ -73,10 +73,17 @@ try {
   const variable = "--all-draft-strokes-stroke-1";
   await page
     .getByLabel(`Animation start ${variable}`, { exact: true })
-    .fill("0.1");
+    .fill("0.13");
   await page
     .getByLabel(`Animation duration ${variable}`, { exact: true })
-    .fill("2.6");
+    .fill("2.67");
+  const paintStart = page.getByLabel(`Animation start ${variable}`, {
+    exact: true,
+  });
+  assert.equal(await paintStart.getAttribute("step"), "0.01");
+  await paintStart.press("ArrowUp");
+  assert.equal(await paintStart.inputValue(), "0.14");
+  await paintStart.press("ArrowDown");
   async function edit(id) {
     if (await page.getByRole("dialog").isVisible())
       await page.keyboard.press("Escape");
@@ -88,12 +95,18 @@ try {
       .click();
   }
   await edit(0);
-  await page.getByLabel("Region start", { exact: true }).fill("0.4");
-  await page.getByLabel("Region duration", { exact: true }).fill("2");
+  await page.getByLabel("Region start", { exact: true }).fill("0.43");
+  await page.getByLabel("Region duration", { exact: true }).fill("0.02");
+  const regionDuration = page.getByLabel("Region duration", { exact: true });
+  assert.equal(await regionDuration.getAttribute("step"), "0.01");
+  await regionDuration.press("ArrowUp");
+  assert.equal(await regionDuration.inputValue(), "0.03");
+  await regionDuration.press("ArrowDown");
+  assert.equal(await regionDuration.evaluate((el) => el.validity.valid), true);
   await page.getByLabel("Region origin X", { exact: true }).fill("10");
   await edit(1);
-  await page.getByLabel("Region start", { exact: true }).fill("1.3");
-  await page.getByLabel("Region duration", { exact: true }).fill("3.2");
+  await page.getByLabel("Region start", { exact: true }).fill("1.37");
+  await page.getByLabel("Region duration", { exact: true }).fill("3.24");
   await page.getByLabel("Region end fill", { exact: true }).fill("65");
   await page.getByLabel("Region origin X", { exact: true }).fill("90");
   await page.keyboard.press("Escape");
@@ -103,11 +116,11 @@ try {
     await edit(1);
     assert.equal(
       await page.getByLabel("Region start", { exact: true }).inputValue(),
-      "1.3",
+      "1.37",
     );
     assert.equal(
       await page.getByLabel("Region duration", { exact: true }).inputValue(),
-      "3.2",
+      "3.24",
     );
     assert.equal(
       await page.getByLabel("Region end fill", { exact: true }).inputValue(),
@@ -120,18 +133,18 @@ try {
     await edit(0);
     assert.equal(
       await page.getByLabel("Region start", { exact: true }).inputValue(),
-      "0.4",
+      "0.43",
     );
     assert.equal(
       await page.getByLabel("Region duration", { exact: true }).inputValue(),
-      "2",
+      "0.02",
     );
     await page.keyboard.press("Escape");
     assert.equal(
       await page
         .getByLabel(`Animation start ${variable}`, { exact: true })
         .inputValue(),
-      "0.1",
+      "0.13",
     );
     assert.equal(
       await page

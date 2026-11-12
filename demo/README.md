@@ -285,6 +285,10 @@ origin on artwork**, then click a point, or enter Region X/Y percentages in the 
 shows the nearest painted sample used as the actual inlet. **Use shared origin** removes only that region's override.
 
 Each disconnected visible region of the same paint can use a different origin.
+Start and Duration use 0.01-second steps in both the paint panel and regional
+popover, on desktop and mobile. Durations may be as short as 0.01 seconds; drafts,
+flow/CSS previews and the bundled portable player preserve those values.
+
 Paint timing supplies shared defaults. Double-click a region or its pin, or choose
 **Edit region settings**, to open a compact nonmodal popover with that region's
 X/Y, Start (s), Duration (s) and End fill (%). Start is an absolute delay from the

@@ -804,7 +804,7 @@ export function FillAnimation({
                       type="number"
                       min="0"
                       max="30"
-                      step="0.1"
+                      step="0.01"
                       value={track.start}
                       onChange={(event) =>
                         update(
@@ -823,17 +823,17 @@ export function FillAnimation({
                     <input
                       aria-label={`Animation duration ${track.name}`}
                       type="number"
-                      min="0.1"
+                      min="0.01"
                       max="30"
-                      step="0.1"
+                      step="0.01"
                       value={track.duration}
                       onChange={(event) =>
                         update(
                           track.name,
                           "duration",
                           Math.max(
-                            0.1,
-                            Math.min(30, Number(event.target.value) || 0.1),
+                            0.01,
+                            Math.min(30, Number(event.target.value) || 0.01),
                           ),
                         )
                       }

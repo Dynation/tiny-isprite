@@ -129,8 +129,8 @@ try {
     .click();
   await page.getByLabel("Region origin X", { exact: true }).fill("12");
   await page.getByLabel("Region origin Y", { exact: true }).fill("18");
-  await page.getByLabel("Region start", { exact: true }).fill("0.6");
-  await page.getByLabel("Region duration", { exact: true }).fill("3");
+  await page.getByLabel("Region start", { exact: true }).fill("0.67");
+  await page.getByLabel("Region duration", { exact: true }).fill("3.03");
   await page.getByLabel("Region end fill", { exact: true }).fill("85");
   await page.getByLabel("Selected region", { exact: true }).selectOption("1");
   await page
@@ -228,8 +228,8 @@ try {
   assert.ok(
     exported.regions[0].customOrigin && exported.regions[1].customOrigin,
   );
-  assert.equal(exported.tracks[exported.regions[0].track].start, 0.6);
-  assert.equal(exported.tracks[exported.regions[0].track].duration, 3);
+  assert.equal(exported.tracks[exported.regions[0].track].start, 0.67);
+  assert.equal(exported.tracks[exported.regions[0].track].duration, 3.03);
   assert.equal(exported.tracks[exported.regions[0].track].end, 85);
   assert.equal(exported.palettes.dark[paints[0]], "#fb923c");
   // Serve only extracted ZIP contents on a different origin. The generator is not a dependency.

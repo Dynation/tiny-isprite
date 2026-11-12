@@ -32,7 +32,7 @@ export function decodeAnimation(data) {
       ![track.start, track.duration, track.end].every(Number.isFinite) ||
       track.start < 0 ||
       track.start > 30 ||
-      track.duration < 0.1 ||
+      track.duration < 0.01 ||
       track.duration > 30 ||
       track.end < 0 ||
       track.end > 100
