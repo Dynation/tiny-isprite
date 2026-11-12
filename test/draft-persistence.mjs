@@ -90,9 +90,10 @@ try {
     await page
       .getByLabel("Selected region", { exact: true })
       .selectOption(String(id));
-    await page
-      .getByRole("button", { name: "Edit region settings", exact: true })
-      .click();
+    if (!(await page.getByRole("dialog").isVisible()))
+      await page
+        .getByRole("button", { name: "Edit region settings", exact: true })
+        .click();
   }
   await edit(0);
   await page.getByLabel("Region start", { exact: true }).fill("0.43");

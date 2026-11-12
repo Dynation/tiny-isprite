@@ -134,8 +134,8 @@ try {
   await page.getByLabel("Region end fill", { exact: true }).fill("85");
   await page.getByLabel("Selected region", { exact: true }).selectOption("1");
   await page
-    .getByRole("button", { name: "Edit region settings", exact: true })
-    .click();
+    .getByRole("dialog", { name: "Region 2 settings", exact: true })
+    .waitFor();
   await page.getByLabel("Region origin X", { exact: true }).fill("82");
   await page.getByLabel("Region origin Y", { exact: true }).fill("76");
   await page

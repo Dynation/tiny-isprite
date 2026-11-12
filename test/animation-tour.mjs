@@ -142,6 +142,13 @@ try {
     await next();
     await at(7, 11);
     await page.getByLabel("Selected region", { exact: true }).selectOption("1");
+    await page
+      .getByRole("dialog", { name: "Region 2 settings", exact: true })
+      .waitFor();
+    assert.equal(
+      await page.getByLabel("Region start", { exact: true }).inputValue(),
+      "0",
+    );
     await next();
     await at(8, 11);
     await page.getByLabel("Region origin X", { exact: true }).fill("72.3");

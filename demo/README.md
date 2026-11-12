@@ -356,7 +356,9 @@ link and favicon follow the configured base. No analytics provider is configured
 
 Enable **Separate region origins** in Fill animation. The transparent preview
 overlay selects painted regions without changing the source SVG. Select a region
-by clicking its painted area or using the Selected region list. Choose **Place
+by clicking its painted area or using the Selected region list. Choosing a different
+region from the dropdown opens its settings popover immediately, including tiny
+regions; no artwork click or double-click is needed. Choose **Place
 origin on artwork**, then click a point, or enter Region X/Y percentages in the point's popover. The pin
 shows the nearest painted sample used as the actual inlet. **Use shared origin** removes only that region's override.
 

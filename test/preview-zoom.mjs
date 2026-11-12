@@ -193,8 +193,8 @@ try {
   await page.keyboard.press("Escape");
   await selected.selectOption("0");
   await page
-    .getByRole("button", { name: "Edit region settings", exact: true })
-    .click();
+    .getByRole("dialog", { name: "Region 1 settings", exact: true })
+    .waitFor();
   assert.ok(
     Math.abs(Number(await originY.inputValue()) - (80 / 256) * 100) < 0.6,
     "origin survives Fit",

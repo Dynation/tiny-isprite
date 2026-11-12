@@ -167,7 +167,18 @@ try {
     "focus returns to region editor trigger",
   );
   await page.getByLabel("Selected region", { exact: true }).selectOption("1");
-  await openEditor();
+  await page
+    .getByRole("dialog", { name: "Region 2 settings", exact: true })
+    .waitFor();
+  assert.ok(
+    Math.abs(
+      Number(
+        await page.getByLabel("Region origin X", { exact: true }).inputValue(),
+      ) - 89,
+    ) < 0.5,
+    "dropdown opens the selected region without an artwork click",
+  );
+
   await page.getByLabel("Region start", { exact: true }).fill("1");
   await page.getByLabel("Region duration", { exact: true }).fill("2");
   await page.getByLabel("Region end fill", { exact: true }).fill("60");
@@ -175,6 +186,9 @@ try {
   assert.equal(await page.getByRole("dialog").count(), 0);
 
   await page.getByLabel("Selected region", { exact: true }).selectOption("0");
+  await page
+    .getByRole("dialog", { name: "Region 1 settings", exact: true })
+    .waitFor();
   assert.ok(Math.abs(Number(await originX()) - 6) < 0.5);
   await page.getByLabel("Selected region", { exact: true }).selectOption("1");
   for (const width of [390, 1024, 1440]) {

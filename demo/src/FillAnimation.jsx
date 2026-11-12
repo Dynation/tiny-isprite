@@ -579,7 +579,7 @@ export function FillAnimation({
     {
       selector: ".region-origin-controls > label",
       title: "Choose a region",
-      body: "Click a painted area on the artwork, or choose it in Selected region. The blue highlight identifies it. For thin lines, zoom with + or Ctrl + wheel; turn the paw-shaped Pan tool off before selecting.",
+      body: "Click a painted area on the artwork, or choose it in Selected region. The dropdown opens that region’s settings immediately. The blue highlight identifies it. For thin lines, zoom with + or Ctrl + wheel; turn the paw-shaped Pan tool off before selecting.",
       canNext: !!selectedRegion,
     },
     {
@@ -871,7 +871,7 @@ export function FillAnimation({
                     changeRegions({
                       selected: Number(event.target.value),
                       placing: false,
-                      editing: false,
+                      editing: true,
                     })
                   }
                 >
@@ -888,8 +888,9 @@ export function FillAnimation({
               </label>
               <p>
                 Click a painted area to select it. The blue overlay highlights
-                that region; the pin shows its actual inlet. Small regions are
-                selectable from the list.
+                that region; the pin shows its actual inlet. Choosing a region
+                from the list opens its settings immediately, including tiny
+                details.
               </p>
               <p className="region-size-note">
                 Perfectionist corner: regions under 10 analysis samples are
