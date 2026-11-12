@@ -63,9 +63,26 @@ export function RegionEditor({
       observer.disconnect();
     };
   }, [anchorRef, prepared, selected]);
-  useEffect(() => {
+  useLayoutEffect(() => {
     popup.current?.focus({ preventScroll: true });
   }, []);
+  useLayoutEffect(() => {
+    const escape = (event) => {
+      // Native dropdowns can keep focus after opening this nonmodal popover.
+      // Close it even when focus is outside; the active tour owns its own Escape.
+      if (
+        event.key !== "Escape" ||
+        event.defaultPrevented ||
+        document.querySelector("[data-animation-tour]")
+      )
+        return;
+      event.preventDefault();
+      event.stopPropagation();
+      onClose();
+    };
+    window.addEventListener("keydown", escape, true);
+    return () => window.removeEventListener("keydown", escape, true);
+  }, [onClose]);
   useEffect(() => {
     const outside = (event) => {
       if (

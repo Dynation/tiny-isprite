@@ -253,10 +253,10 @@ export function FillAnimation({
     changeRegions({ origins, placing: false });
   }
   function openRegionEditor(selected) {
-    targetRef.current?.parentElement?.scrollIntoView({
-      block: "nearest",
-      behavior: "instant",
-    });
+    const viewport =
+      targetRef.current?.closest(".preview-viewport") ||
+      targetRef.current?.parentElement;
+    viewport?.scrollIntoView({ block: "nearest", behavior: "instant" });
     changeRegions({ selected, editing: true, placing: false });
   }
   function closeRegionEditor(restoreFocus = true) {
@@ -868,11 +868,7 @@ export function FillAnimation({
                   aria-label="Selected region"
                   value={regions.selected}
                   onChange={(event) =>
-                    changeRegions({
-                      selected: Number(event.target.value),
-                      placing: false,
-                      editing: true,
-                    })
+                    openRegionEditor(Number(event.target.value))
                   }
                 >
                   {prepared.components.map((region) => (

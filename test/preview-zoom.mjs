@@ -146,6 +146,25 @@ try {
     name: "Zoomable artwork preview",
     exact: true,
   });
+  const beforeDropdown = await viewport.evaluate((el) => [
+    el.scrollLeft,
+    el.scrollTop,
+  ]);
+  await selected.selectOption("0");
+  await page
+    .getByRole("dialog", { name: "Region 1 settings", exact: true })
+    .waitFor();
+  assert.deepEqual(
+    await viewport.evaluate((el) => [el.scrollLeft, el.scrollTop]),
+    beforeDropdown,
+    "opening a dropdown region preserves zoomed canvas pan",
+  );
+  await page.keyboard.press("Escape");
+  await selected.selectOption("1");
+  await page
+    .getByRole("dialog", { name: "Region 2 settings", exact: true })
+    .waitFor();
+  await page.keyboard.press("Escape");
   const scroll = () =>
     viewport.evaluate((el) => ({ x: el.scrollLeft, y: el.scrollTop }));
   await page.getByRole("button", { name: "Pan preview", exact: true }).click();
@@ -200,16 +219,28 @@ try {
     "origin survives Fit",
   );
   await page.keyboard.press("Escape");
+  await page
+    .locator(".preview-column")
+    .evaluate((el) => el.scrollIntoView({ block: "start" }));
+  await poll(
+    async () => (await page.getByRole("dialog").count()) === 0,
+    "region popup closes before wheel input",
+  );
   const viewBefore = await page.evaluate(() => innerWidth);
   const rect = await viewport.boundingBox();
   await page.mouse.move(rect.x + rect.width / 2, rect.y + rect.height / 2);
   await page.keyboard.down("Control");
-  await page.mouse.wheel(0, -70);
-  await page.keyboard.up("Control");
-  await poll(
-    async () => (await zoom.textContent()) !== "100%",
-    "canvas wheel zoom",
-  );
+  try {
+    // Wheel dispatch may resolve before the browser handles it. Keep Ctrl held
+    // until canvas zoom reacts, so it cannot become an ordinary scroll event.
+    await page.mouse.wheel(0, -70);
+    await poll(
+      async () => (await zoom.textContent()) !== "100%",
+      "canvas wheel zoom",
+    );
+  } finally {
+    await page.keyboard.up("Control");
+  }
   assert.equal(
     await page.evaluate(() => innerWidth),
     viewBefore,
