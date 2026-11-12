@@ -247,7 +247,13 @@ try {
   );
   await page.getByLabel("Asset path", { exact: true }).fill("/assets/");
   await ready();
-  await page.getByLabel("Preview color", { exact: true }).fill("#d83868");
+  await page.getByRole("tab", { name: "Colors", exact: true }).click();
+  await page
+    .locator(".icon-card")
+    .filter({ hasText: /^heart$/ })
+    .click();
+  await ready();
+  await page.getByLabel("Light currentColor", { exact: true }).fill("#d83868");
   await page.getByRole("slider", { name: /Size/ }).focus();
   await page.getByRole("slider", { name: /Size/ }).press("End");
   assert.ok(

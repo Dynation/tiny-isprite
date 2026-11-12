@@ -3123,3 +3123,21 @@ html[data-page-theme="dark"] .animation-tour-popover .tour-branch {
   border-left: 2px solid #c29143;
   font-size: 11px;
 }
+
+.current-color-controls {
+  min-width: 0;
+  margin: 20px 0;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.current-color-controls legend {
+  font-weight: 600;
+  font-size: 13px;
+}
+.current-color-controls .theme-foreground {
+  flex-wrap: wrap;
+}
+.current-color-controls code {
+  font-size: 10px;
+}

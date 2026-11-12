@@ -27,6 +27,7 @@ import {
 } from "./lib/project.js";
 import { buildSingleIcon } from "./lib/single-icon.js";
 import { iconVariables, variableCss, colorHex } from "./lib/palette.js";
+import { usesCurrentColor } from "./lib/current-color.js";
 import { singleUsageSnippet } from "./lib/usage.js";
 import { buildThemeExample, darkColor } from "./lib/theme.js";
 import {
@@ -382,6 +383,7 @@ function App({ initialDraft, storageError = "" }) {
     ...variable,
     value: options.palette[current?.name]?.[variable.name] || variable.value,
   }));
+  const hasCurrentColor = usesCurrentColor(artifact?.selected?.svg);
   const paletteCode = variableCss(variables);
   const usageCode =
     single && artifact?.single && current
@@ -830,21 +832,54 @@ function App({ initialDraft, storageError = "" }) {
                 )}
               </>
             )}
-            <label className="theme-foreground">
-              Dark currentColor{" "}
-              <input
-                type="color"
-                aria-label="Dark currentColor"
-                value={themeExample.foregroundDark}
-                onChange={(event) => {
-                  setDarkForegrounds((previous) => ({
-                    ...previous,
-                    [current.name]: event.target.value,
-                  }));
-                  setPreviewTheme("dark");
-                }}
-              />
-            </label>
+            {hasCurrentColor && (
+              <fieldset className="current-color-controls">
+                <legend>currentColor</legend>
+                <p>Color inherited by currentColor fills and strokes.</p>
+                <label className="theme-foreground">
+                  Light currentColor
+                  <input
+                    type="color"
+                    aria-label="Light currentColor"
+                    value={color}
+                    onChange={(event) => {
+                      setColor(event.target.value);
+                      setPreviewTheme("light");
+                    }}
+                  />
+                  <code>{color.toUpperCase()}</code>
+                </label>
+                <label className="theme-foreground">
+                  Dark currentColor
+                  <input
+                    type="color"
+                    aria-label="Dark currentColor"
+                    value={themeExample.foregroundDark}
+                    onChange={(event) => {
+                      setDarkForegrounds((previous) => ({
+                        ...previous,
+                        [current.name]: event.target.value,
+                      }));
+                      setPreviewTheme("dark");
+                    }}
+                  />
+                  <code>{themeExample.foregroundDark.toUpperCase()}</code>
+                </label>
+                <p>
+                  Pick a color to switch the preview background too. Single
+                  SVG/React downloads use the light default; globals.css and
+                  animation ZIPs include both themes. Your SVG keeps
+                  currentColor paints.
+                </p>
+              </fieldset>
+            )}
+            {options.mode === "original" && !hasCurrentColor && (
+              <p>
+                Original fills and strokes keep their source colors. There are
+                no currentColor paints to adjust. Generate CSS variables to edit
+                individual colors.
+              </p>
+            )}
             <p className="theme-help">
               Use <b>globals.css / @theme</b> for light/dark design tokens, then{" "}
               <b>Tailwind</b> for the component and toggle. SVG/React downloads
@@ -1439,21 +1474,6 @@ function App({ initialDraft, storageError = "" }) {
                 </div>
               </details>
               <div className="preview-controls">
-                <label className="color-control">
-                  Preview color{" "}
-                  <span className="color-swatch" style={{ background: color }}>
-                    <input
-                      aria-label="Preview color"
-                      type="color"
-                      value={color}
-                      onChange={(event) => {
-                        setColor(event.target.value);
-                        setPreviewTheme("light");
-                      }}
-                    />
-                  </span>
-                  <code>{color.toUpperCase()}</code>
-                </label>
                 <label className="size-control" htmlFor="preview-size">
                   Size
                   <input
@@ -1488,10 +1508,8 @@ function App({ initialDraft, storageError = "" }) {
                 </label>
               </div>
               <div className="preview-footnote">
-                Preview color changes <code>currentColor</code>; palette pickers
-                change named variables. Single SVG downloads include your chosen
-                currentColor. Fixed fills and gradient stops retain their source
-                colors.
+                Color controls are in the Colors tab. Fixed fills and gradient
+                stops retain their source colors.
               </div>
             </div>
           </div>
