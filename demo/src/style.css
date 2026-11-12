@@ -1598,13 +1598,29 @@ footer > a:last-child span {
   border: 1px solid #e1e5db;
   background: white;
 }
+.theme-preview {
+  --preview-ink: #242b2c;
+  --preview-muted: #586653;
+  --preview-surface: #fff;
+  --preview-border: #c4cdbe;
+  --preview-active: #d9e5ff;
+  --preview-active-ink: #1742ba;
+  color-scheme: light;
+}
 .theme-preview.dark {
+  --preview-ink: #e5e9f2;
+  --preview-muted: #a9b6cc;
+  --preview-surface: #222d3e;
+  --preview-border: #64748b;
+  --preview-active: #344c77;
+  --preview-active-ink: #d6e6ff;
+  color-scheme: dark;
   background-color: #0f172a;
   background-image: radial-gradient(#334155 1px, transparent 1px);
   border-color: #334155;
 }
-.theme-preview.dark small {
-  color: #cbd5e1;
+.theme-preview small {
+  color: var(--preview-muted);
 }
 .theme-preview .selected-artwork > svg {
   color: inherit;
@@ -2052,7 +2068,6 @@ html[data-page-theme="dark"]
     .icon-card,
     .search,
     .mode-option,
-    .selected-preview,
     .variable-value,
     .theme-toggle,
     .inspector-tabs,
@@ -2071,8 +2086,7 @@ html[data-page-theme="dark"]
   background-color: #191f2b;
   border-color: #323c4e;
 }
-html[data-page-theme="dark"]
-  :is(.icon-inspector, .icon-library, .selected-preview, .theme-guide) {
+html[data-page-theme="dark"] :is(.icon-inspector, .icon-library, .theme-guide) {
   border-color: #323c4e;
 }
 html[data-page-theme="dark"]
@@ -2087,7 +2101,7 @@ html[data-page-theme="dark"]
     .mode-option small,
     .toggle-row small,
     .safe-note,
-    .selected-preview small,
+    .palette-editor p,
     .preview-footnote,
     .theme-help,
     .theme-foreground,
@@ -2175,15 +2189,6 @@ html[data-page-theme="dark"]
 }
 html[data-page-theme="dark"] .icon-canvas {
   background-image: radial-gradient(#42516a66 0.7px, transparent 0.7px);
-}
-html[data-page-theme="dark"] .selected-preview {
-  background-image: radial-gradient(#46516866 1px, transparent 1px);
-}
-html[data-page-theme="dark"] .theme-preview:not(.dark) {
-  background-color: #242c3b;
-}
-html[data-page-theme="dark"] .theme-preview.dark {
-  background-color: #0f172a;
 }
 html[data-page-theme="dark"] .stage-toolbar .section-label > span {
   background: #28364c;
@@ -2890,7 +2895,7 @@ html[data-page-theme="dark"] .editor-viewbar {
 
 /* Zoom and pan affect the editing view, never the generated SVG. */
 .canvas-tools {
-  color: var(--ink);
+  color: var(--preview-ink);
   display: flex;
   align-items: center;
   gap: 5px;
@@ -2899,15 +2904,16 @@ html[data-page-theme="dark"] .editor-viewbar {
   font-size: 11px;
 }
 .canvas-tools button {
+  color: var(--preview-ink);
   padding: 5px 8px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--preview-border);
   border-radius: 5px;
-  background: var(--surface, #fff);
+  background: var(--preview-surface);
   min-height: 30px;
 }
 .canvas-tools button[aria-pressed="true"] {
-  background: #d9e5ff;
-  color: #1742ba;
+  background: var(--preview-active);
+  color: var(--preview-active-ink);
 }
 .canvas-tools button:disabled {
   opacity: 0.4;
@@ -2920,7 +2926,7 @@ html[data-page-theme="dark"] .editor-viewbar {
 }
 .canvas-zoom-help {
   margin-left: auto;
-  color: #73816f;
+  color: var(--preview-muted);
   font-size: 10px;
 }
 .preview-viewport {
@@ -2957,16 +2963,6 @@ html[data-page-theme="dark"] .editor-viewbar {
 .preview-viewport:focus-visible {
   outline: 2px solid var(--blue);
   outline-offset: -2px;
-}
-html[data-page-theme="dark"] .canvas-tools button {
-  background: #222d3e;
-}
-html[data-page-theme="dark"] .canvas-tools button[aria-pressed="true"] {
-  background: #344c77;
-  color: #d6e6ff;
-}
-html[data-page-theme="dark"] .canvas-zoom-help {
-  color: #a4b6d0;
 }
 @media (max-width: 720px) {
   .canvas-zoom-help {
