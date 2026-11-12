@@ -2772,3 +2772,99 @@ html[data-page-theme="dark"] .editor-viewbar {
     min-height: 190px;
   }
 }
+
+/* Zoom and pan affect the editing view, never the generated SVG. */
+.canvas-tools {
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  width: 100%;
+  flex-shrink: 0;
+  font-size: 11px;
+}
+.canvas-tools button {
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--surface, #fff);
+  min-height: 30px;
+}
+.canvas-tools button[aria-pressed="true"] {
+  background: #d9e5ff;
+  color: #1742ba;
+}
+.canvas-tools button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.canvas-tools output {
+  min-width: 42px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.canvas-zoom-help {
+  margin-left: auto;
+  color: #73816f;
+  font-size: 10px;
+}
+.preview-viewport {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  overflow: auto;
+  position: relative;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+.preview-plane {
+  position: relative;
+  min-width: 100%;
+  min-height: 100%;
+}
+.workspace .preview-plane > .selected-artwork {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+.preview-viewport[data-pan] {
+  cursor: grab;
+}
+.preview-viewport[data-dragging] {
+  cursor: grabbing;
+  user-select: none;
+}
+.preview-viewport[data-pan] :is(svg, .region-origin-overlay) {
+  cursor: inherit !important;
+}
+.preview-viewport:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: -2px;
+}
+html[data-page-theme="dark"] .canvas-tools button {
+  background: #222d3e;
+}
+html[data-page-theme="dark"] .canvas-tools button[aria-pressed="true"] {
+  background: #344c77;
+  color: #d6e6ff;
+}
+html[data-page-theme="dark"] .canvas-zoom-help {
+  color: #a4b6d0;
+}
+@media (max-width: 720px) {
+  .canvas-zoom-help {
+    display: none;
+  }
+  .workspace .selected-preview {
+    gap: 6px;
+    padding: 8px;
+  }
+  .canvas-tools {
+    gap: 4px;
+  }
+  .canvas-tools button {
+    padding: 4px 7px;
+  }
+}

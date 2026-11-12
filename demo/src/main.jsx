@@ -30,6 +30,7 @@ import {
   useEditorLayout,
   usePanelWidth,
 } from "./EditorLayout.jsx";
+import { PreviewCanvas } from "./PreviewCanvas.jsx";
 import { FillAnimation } from "./FillAnimation.jsx";
 import { loadDraft, saveDraft } from "./lib/local-draft.js";
 import "./style.css";
@@ -593,16 +594,18 @@ function App({ initialDraft, storageError = "" }) {
             }}
             aria-label={`Live preview of ${current.name}`}
           >
-            {artifact?.selected && (
-              <div
-                ref={artworkRef}
-                className="selected-artwork"
-                dangerouslySetInnerHTML={{ __html: artifact.selected.svg }}
-              />
-            )}
+            <PreviewCanvas key={current.name}>
+              {artifact?.selected && (
+                <div
+                  ref={artworkRef}
+                  className="selected-artwork"
+                  dangerouslySetInnerHTML={{ __html: artifact.selected.svg }}
+                />
+              )}
+            </PreviewCanvas>
             <small>
-              {size} × {artifact?.selected?.height || size} px export · preview
-              fits this canvas
+              {size} × {artifact?.selected?.height || size} px export · zoom
+              affects preview only
             </small>
           </div>
           <div id="animation-timeline-slot" />
