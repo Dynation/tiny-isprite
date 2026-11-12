@@ -222,6 +222,11 @@ try {
     .getByRole("button", { name: "Animation controls", exact: true })
     .click();
   await page.setViewportSize({ width: 1024, height: 1000 });
+  // matchMedia dispatch and the React effect cleanup follow the resize event.
+  await poll(async () => await page.evaluate(() =>
+    document.body.style.overflow === "" &&
+    document.querySelector(".app-shell").dataset.mobilePanel === "none"
+  ), "desktop resize closes the mobile sheet and restores scrolling");
   assert.equal(await page.evaluate(() => document.body.style.overflow), "");
   assert.equal(
     await page.locator(".app-shell").getAttribute("data-mobile-panel"),
