@@ -9,6 +9,10 @@ import { createRoot } from "react-dom/client";
 import { Icon } from "tiny-isprite";
 import { samples, featuredSamples } from "./samples.js";
 import {
+  demoAnimationStates,
+  demoDarkPalettes,
+} from "./lib/demo-animations.js";
+import {
   buildProject,
   cleanSvg,
   defaultOptions,
@@ -145,8 +149,9 @@ function App({ initialDraft, storageError = "" }) {
     );
   }
   const [animationStates, setAnimationStates] = useState(
-    start.animationStates || {},
+    () => start.animationStates || demoAnimationStates(),
   );
+  const [sampleRevision, setSampleRevision] = useState(0);
   const rememberAnimation = useCallback(
     (name, state) =>
       setAnimationStates((previous) => ({ ...previous, [name]: state })),
@@ -193,7 +198,9 @@ function App({ initialDraft, storageError = "" }) {
   const [previewTheme, setPreviewTheme] = useState(
     start.previewTheme || "light",
   );
-  const [darkPalettes, setDarkPalettes] = useState(start.darkPalettes || {});
+  const [darkPalettes, setDarkPalettes] = useState(
+    () => start.darkPalettes || demoDarkPalettes(),
+  );
   const [darkForegrounds, setDarkForegrounds] = useState(
     start.darkForegrounds || {},
   );
@@ -891,7 +898,7 @@ function App({ initialDraft, storageError = "" }) {
             hidden={inspectorTab !== "animation"}
           >
             <FillAnimation
-              key={current.name}
+              key={`${current.name}:${sampleRevision}`}
               initialState={animationStates[current.name]}
               onStateChange={rememberAnimation}
               sourceReady={!!ready}
@@ -1027,6 +1034,23 @@ function App({ initialDraft, storageError = "" }) {
                 onClick={() => {
                   setIcons(samples.map((icon) => ({ ...icon })));
                   setSelected("orbit");
+                  setAnimationStates((previous) => ({
+                    ...previous,
+                    ...demoAnimationStates(),
+                  }));
+                  setSampleRevision((value) => value + 1);
+                  setDarkPalettes(demoDarkPalettes());
+                  setTarget("single");
+                  setOptions({
+                    ...defaultOptions,
+                    mode: "variables",
+                    allColors: true,
+                    editablePalette: true,
+                    palette: {},
+                    strokeWidths: {},
+                  });
+                  setColor("#245cf3");
+                  setPreviewTheme("light");
                   setQuery("");
                   setNotice("Sample set loaded.");
                 }}
@@ -1303,11 +1327,7 @@ function App({ initialDraft, storageError = "" }) {
                     disabled={!icons.some((icon) => icon.name === sample.name)}
                     onClick={() => setSelected(sample.name)}
                   >
-                    {sample.name === "orbit"
-                      ? "Orbit"
-                      : sample.name === "bloom"
-                        ? "Bloom"
-                        : "Ribbon"}
+                    {sample.label}
                   </button>
                 ))}
               </div>

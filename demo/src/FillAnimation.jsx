@@ -1,6 +1,12 @@
 import { captureTopology, resolveRegions } from "./lib/animation-state.js";
 import { animationAiPrompt } from "./lib/animation-guide.js";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   buildDistanceField,
   buildRegionTiming,
@@ -78,6 +84,16 @@ export function FillAnimation({
       if (!group.attributes.length) group.replaceWith(...group.childNodes);
     return new XMLSerializer().serializeToString(root);
   }, [svg]);
+  // Bind imported topology only once the correct generated artwork is ready.
+  // Later geometry edits use the normal retained-region reconciliation rules.
+  useLayoutEffect(() => {
+    if (sourceReady && geometryKey && regionConfig.needsGeometryKey)
+      setRegionConfig((previous) => ({
+        ...previous,
+        key: geometryKey,
+        needsGeometryKey: false,
+      }));
+  }, [sourceReady, geometryKey, regionConfig.needsGeometryKey]);
   const paintNames = variables.length
     ? variables.map((variable) => variable.name)
     : ["all-paint"];
@@ -403,6 +419,28 @@ export function FillAnimation({
     }
     frame.current = requestAnimationFrame(tick);
   }
+  const autoPlayPending = useRef(saved.autoPlay === true);
+  useEffect(() => {
+    if (
+      !autoPlayPending.current ||
+      !sourceReady ||
+      !prepared ||
+      regionConfig.needsGeometryKey ||
+      !enabled ||
+      !active
+    )
+      return;
+    autoPlayPending.current = false;
+    if (reduced) setProgress(100);
+    else play();
+  }, [
+    sourceReady,
+    prepared,
+    regionConfig.needsGeometryKey,
+    enabled,
+    active,
+    reduced,
+  ]);
   function update(name, key, value) {
     stop();
     setSettings((previous) => ({

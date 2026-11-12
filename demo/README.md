@@ -240,10 +240,27 @@ preview/timeline visibility at 390px and 320px. It is part of test:playground.
 
 The playground starts with the original multicolor Orbit artwork in Single icon
 mode at 256px. Generate CSS variables and Include multicolor fills and strokes
-are enabled. Fill animation is ready to play for the three featured samples;
-uploaded artwork still requires opting in. Orbit, Bloom and Ribbon are original
-MIT-licensed demo artwork. The full sprite collection is available in the
-collapsed More icons & sprite collection panel below the selected editor.
+are enabled. Featured examples are Orbit, Ribbon, Check circle, Code, Sun and
+Photograph, using the maintainer's six exported animation ZIPs. Their paint and
+regional schedules, inlet coordinates, light/dark palettes and edited artwork are
+restored as editable controls, rather than approximated with generic delays.
+Orbit plays once on a fresh visit. Each untouched example plays once when first
+selected; saved edits restore paused. Reduced motion shows the completed artwork.
+Uploaded artwork still requires opting in. Existing local drafts take precedence;
+Load samples explicitly restores the authored examples and standard single-icon
+options. Bloom and the other basic icons remain in the collapsed sprite library.
+
+`src/data/demo-animations.json` contains declarative artwork/settings, ZIP SHA-256
+provenance and run-length encoded regional topology. ZIP JavaScript is parsed as
+JSON during import, never executed. The bundled arrival/player code is not copied;
+the editor rebuilds its own fields and uses overlap matching to retain each
+region's timing/origin. Topology is bound once to the correct generated geometry.
+`test/demo-presets.mjs` compares every region's timing, origin and both palettes
+with actual ZIP re-exports for all six examples, and tests autoplay, reduced
+motion, saved edits and explicit reset. Orbit, Ribbon and Bloom are original MIT
+artwork; Photograph is the maintainer-supplied `photograph-svgrepo-com` asset and
+retains its upstream artwork license, as described in animation exports.
+
 
 The whole page starts dark. The header theme button saves the page theme in
 localStorage when available; the editor works when storage is blocked. This is

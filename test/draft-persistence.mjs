@@ -161,13 +161,13 @@ try {
   await page.getByLabel("Line thickness", { exact: true }).fill("2");
   await page.getByRole("tab", { name: "Fill animation", exact: true }).click();
   await verify();
-  await page.getByRole("button", { name: "Bloom", exact: true }).click();
+  await page.getByRole("button", { name: "Ribbon", exact: true }).click();
   await poll(
     () =>
       page
         .locator(".icon-inspector h3")
         .textContent()
-        .then((v) => v === "bloom"),
+        .then((v) => v === "ribbon"),
     "another icon",
   );
   await page.locator(".icon-library summary").click();

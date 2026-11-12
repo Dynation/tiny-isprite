@@ -1,3 +1,4 @@
+import { samples } from "../demo/src/samples.js";
 import { transformSync } from "esbuild";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -192,13 +193,13 @@ try {
   console.log(
     "PASS animation color dots follow edited light and dark artwork palettes",
   );
-  await page.getByRole("button", { name: "Bloom", exact: true }).click();
+  await page.getByRole("button", { name: "Ribbon", exact: true }).click();
   await poll(
     () =>
       page
         .locator(".icon-inspector h3")
         .textContent()
-        .then((n) => n === "bloom"),
+        .then((n) => n === "ribbon"),
     "featured artwork choice",
   );
   await page.getByRole("button", { name: "Orbit", exact: true }).click();
@@ -218,14 +219,14 @@ try {
   const ready = () =>
     poll(() => exportButton.isEnabled(), "generated artifact");
   await ready();
-  assert.equal(await page.locator(".icon-card").count(), 15);
+  assert.equal(await page.locator(".icon-card").count(), samples.length);
   await page.waitForFunction(() =>
     [...document.querySelectorAll(".icon-card use")].every(
       (element) => element.getBBox().width > 0,
     ),
   );
   console.log(
-    "PASS actual React component renders all fifteen external SVG symbols",
+    "PASS actual React component renders every external SVG sample symbol",
   );
   await page.getByRole("textbox", { name: "Search icons" }).fill("heart");
   assert.equal(await page.locator(".icon-card").count(), 1);
@@ -285,7 +286,8 @@ try {
   ]);
   await ready();
   await poll(
-    async () => (await page.locator(".icon-card").count()) === 17,
+    async () =>
+      (await page.locator(".icon-card").count()) === samples.length + 2,
     "SVG uploads",
   );
   await page.getByLabel("Upload SVG files", { exact: true }).setInputFiles({
@@ -297,7 +299,8 @@ try {
   });
   await ready();
   await poll(
-    async () => (await page.locator(".icon-card").count()) === 18,
+    async () =>
+      (await page.locator(".icon-card").count()) === samples.length + 3,
     "duplicate name upload",
   );
   assert.ok(
@@ -315,7 +318,7 @@ try {
       (await page.locator(".notice").textContent()).includes("Not a valid SVG"),
     "invalid SVG rejection",
   );
-  assert.equal(await page.locator(".icon-card").count(), 18);
+  assert.equal(await page.locator(".icon-card").count(), samples.length + 3);
   const transfer = await page.evaluateHandle(() => {
     const data = new DataTransfer();
     data.items.add(
@@ -331,7 +334,8 @@ try {
     .locator(".icon-canvas")
     .dispatchEvent("drop", { dataTransfer: transfer });
   await poll(
-    async () => (await page.locator(".icon-card").count()) === 19,
+    async () =>
+      (await page.locator(".icon-card").count()) === samples.length + 4,
     "drag and drop upload",
   );
   await ready();
@@ -1241,8 +1245,9 @@ try {
   assert.equal(await page.locator(".icon-card").count(), 0);
   assert.equal(await exportButton.isEnabled(), false);
   await page.getByRole("button", { name: "Load samples", exact: true }).click();
+  await page.getByRole("radio", { name: "Sprite", exact: true }).check();
   await ready();
-  assert.equal(await page.locator(".icon-card").count(), 15);
+  assert.equal(await page.locator(".icon-card").count(), samples.length);
   console.log(
     "PASS invalid options cannot export stale artifacts; empty-state and sample recovery",
   );
