@@ -194,10 +194,32 @@ production React bundles. It blocks all outside requests. Optional local QA may
 set PLAYGROUND_EXPORT_SVG to a personal SVG; that source is not committed.
 `npm run test:playground` includes this consumer test.
 
-Animation ZIP export is available at the top of the animation pane, in the sticky
-Timeline block. The general downloads panel includes Open animation export, which
-opens the correct tab, scrolls to the selected icon and focuses Enable fill
-animation. Its caption explains the remaining enable/export steps.
+Animation ZIP export lives in the shared downloads panel alongside the static
+SVG, React and bundle downloads. It remains available from the Colors tab when
+animation is enabled and the current artwork is ready. How to use your animation
+ZIP is collapsed by default and contains integration instructions and Copy AI
+prompt. Uploaded artwork has a Set up animation helper until animation is enabled.
+
+### Editor workspace
+
+The editor uses the available page width. On desktop, drag the vertical separators
+to resize package settings and icon controls; the canvas takes the remaining
+space. Separators also support arrow keys (Shift for larger steps), Home/End, and
+double-click to reset. Package settings and Icon controls can be collapsed without
+unmounting the editor or losing animation settings. Reset layout restores defaults.
+Panel widths and collapsed states are saved locally when storage is available.
+
+Expand editor fills the viewport; Escape exits. Downloads leaves the expanded view
+and scrolls to all downloads. The timeline stays directly below the artwork,
+independent of the controls pane's scroll position. On screens up to 1000px wide,
+Package, Colors and Animation open compact bottom sheets; the preview and timeline
+remain above the controls on portrait screens. Close or Escape dismisses the sheet.
+Short landscape screens prioritize scrollable controls. The regional timing editor
+also uses a bottom sheet on phones.
+
+`node test/editor-layout.mjs` checks pointer and keyboard resizing, saved layout,
+collapse/reset, expanded-view recovery, ZIP download from Colors, and mobile
+preview/timeline visibility at 390px and 320px. It is part of test:playground.
 
 ### First visit and page theme
 
@@ -213,8 +235,8 @@ localStorage when available; the editor works when storage is blocked. This is
 independent of the artwork's Light preview / Dark preview palette switch.
 Downloads precede the React/Tailwind guides, package installation is near the end,
 and the optional Ko-fi link follows exports without a popup or blocking step.
-The current Sites address remains the preview location; deployment does not
-change the audience or enable public access.
+The public editor is deployed on GitHub Pages; the earlier Sites preview is
+a separate build.
 
 ### GitHub Pages
 

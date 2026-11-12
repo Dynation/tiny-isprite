@@ -88,6 +88,14 @@ try {
   );
   const overlay = page.getByLabel("Region selection overlay", { exact: true });
   async function openEditor() {
+    if (
+      !(await page
+        .getByRole("button", { name: "Edit region settings", exact: true })
+        .isVisible())
+    )
+      await page
+        .getByRole("button", { name: "Animation controls", exact: true })
+        .click();
     if (!(await page.getByRole("dialog").isVisible()))
       await page
         .getByRole("button", { name: "Edit region settings", exact: true })
@@ -172,6 +180,10 @@ try {
   for (const width of [390, 1024, 1440]) {
     await page.setViewportSize({ width, height: 1000 });
     await ready();
+    if (width <= 1000)
+      await page
+        .getByRole("button", { name: "Animation controls", exact: true })
+        .click();
     assert.ok(Math.abs(Number(await originX()) - 89) < 0.5);
     const pop = await page.getByRole("dialog").boundingBox();
     const pin = await page

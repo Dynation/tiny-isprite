@@ -25,6 +25,11 @@ import { buildSingleIcon } from "./lib/single-icon.js";
 import { iconVariables, variableCss, colorHex } from "./lib/palette.js";
 import { singleUsageSnippet } from "./lib/usage.js";
 import { buildThemeExample, darkColor } from "./lib/theme.js";
+import {
+  PanelSeparator,
+  useEditorLayout,
+  usePanelWidth,
+} from "./EditorLayout.jsx";
 import { FillAnimation } from "./FillAnimation.jsx";
 import { loadDraft, saveDraft } from "./lib/local-draft.js";
 import "./style.css";
@@ -81,6 +86,63 @@ function BrandMark({ small = false }) {
 }
 function App({ initialDraft, storageError = "" }) {
   const start = initialDraft || {};
+  const [layout, updateLayout, resetLayout] = useEditorLayout();
+  const [focusMode, setFocusMode] = useState(false),
+    [mobilePanel, setMobilePanel] = useState(null);
+  const [bodyNode, setBodyNode] = useState(null),
+    [inspectorNode, setInspectorNode] = useState(null);
+  const bodyWidth = usePanelWidth(bodyNode),
+    inspectorWidth = usePanelWidth(inspectorNode);
+  const packageMax = Math.min(380, Math.max(180, bodyWidth - 620));
+  const controlsMax = Math.min(520, Math.max(260, inspectorWidth - 280));
+  const packageWidth = Math.max(180, Math.min(packageMax, layout.packageWidth));
+  const controlsWidth = Math.max(
+    260,
+    Math.min(controlsMax, layout.inspectorWidth),
+  );
+  useEffect(() => {
+    if (!focusMode && !mobilePanel) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [focusMode, mobilePanel]);
+  useEffect(() => {
+    const escape = (event) => {
+      if (event.key !== "Escape" || event.defaultPrevented) return;
+      if (mobilePanel) setMobilePanel(null);
+      else setFocusMode(false);
+    };
+    window.addEventListener("keydown", escape);
+    return () => window.removeEventListener("keydown", escape);
+  }, [mobilePanel]);
+  useEffect(() => {
+    const wide = matchMedia("(min-width: 1001px)");
+    const close = () => {
+      if (wide.matches) setMobilePanel(null);
+    };
+    wide.addEventListener("change", close);
+    return () => wide.removeEventListener("change", close);
+  }, []);
+  function openMobilePanel(panel, tab) {
+    if (tab) selectInspectorTab(tab);
+    setMobilePanel(panel);
+    requestAnimationFrame(() =>
+      document
+        .querySelector(".preview-column")
+        ?.scrollIntoView({ block: "start", behavior: "instant" }),
+    );
+  }
+  function openDownloads() {
+    setFocusMode(false);
+    setMobilePanel(null);
+    requestAnimationFrame(() =>
+      document
+        .querySelector(".export-panel")
+        ?.scrollIntoView({ block: "start", behavior: "smooth" }),
+    );
+  }
   const [animationStates, setAnimationStates] = useState(
     start.animationStates || {},
   );
@@ -494,6 +556,8 @@ function App({ initialDraft, storageError = "" }) {
   }
   function openAnimationExport() {
     selectInspectorTab("animation");
+    updateLayout({ inspectorCollapsed: false });
+    if (matchMedia("(max-width: 1000px)").matches) setMobilePanel("controls");
     requestAnimationFrame(() => {
       document
         .querySelector(".icon-inspector")
@@ -517,30 +581,52 @@ function App({ initialDraft, storageError = "" }) {
           Reset icon
         </button>
       </div>
-      <div className="inspector-body">
-        <div
-          className={`selected-preview theme-preview ${previewTheme === "dark" ? "dark" : ""}`}
-          data-preview-theme={previewTheme}
-          style={{
-            ...activePalette,
-            color:
-              previewTheme === "dark" ? themeExample.foregroundDark : color,
-          }}
-          aria-label={`Live preview of ${current.name}`}
-        >
-          {artifact?.selected && (
-            <div
-              ref={artworkRef}
-              className="selected-artwork"
-              dangerouslySetInnerHTML={{ __html: artifact.selected.svg }}
-            />
-          )}
-          <small>
-            {size} × {artifact?.selected?.height || size} px export · preview
-            fits this canvas
-          </small>
+      <div className="inspector-body" ref={setInspectorNode}>
+        <div className="preview-column">
+          <div
+            className={`selected-preview theme-preview ${previewTheme === "dark" ? "dark" : ""}`}
+            data-preview-theme={previewTheme}
+            style={{
+              ...activePalette,
+              color:
+                previewTheme === "dark" ? themeExample.foregroundDark : color,
+            }}
+            aria-label={`Live preview of ${current.name}`}
+          >
+            {artifact?.selected && (
+              <div
+                ref={artworkRef}
+                className="selected-artwork"
+                dangerouslySetInnerHTML={{ __html: artifact.selected.svg }}
+              />
+            )}
+            <small>
+              {size} × {artifact?.selected?.height || size} px export · preview
+              fits this canvas
+            </small>
+          </div>
+          <div id="animation-timeline-slot" />
         </div>
+        <PanelSeparator
+          label="Resize color and animation panel"
+          value={controlsWidth}
+          min={260}
+          max={controlsMax}
+          direction={-1}
+          onChange={(inspectorWidth) => updateLayout({ inspectorWidth })}
+          reset={() => updateLayout({ inspectorWidth: 340 })}
+        />
         <div className="inspector-controls" ref={inspectorControls}>
+          <div className="mobile-sheet-heading">
+            <strong>Icon controls</strong>
+            <button
+              type="button"
+              aria-label="Close icon controls"
+              onClick={() => setMobilePanel(null)}
+            >
+              ×
+            </button>
+          </div>
           <div
             className="inspector-tabs"
             role="tablist"
@@ -805,6 +891,8 @@ function App({ initialDraft, storageError = "" }) {
               key={current.name}
               initialState={animationStates[current.name]}
               onStateChange={rememberAnimation}
+              sourceReady={!!ready}
+              onConfigure={openAnimationExport}
               active={inspectorTab === "animation"}
               initiallyEnabled={!!current.featured}
               name={current.name}
@@ -834,7 +922,16 @@ function App({ initialDraft, storageError = "" }) {
     </section>
   );
   return (
-    <div className="app-shell">
+    <div
+      className={`app-shell ${focusMode ? "editor-focus" : ""}`}
+      style={{
+        "--package-width": `${packageWidth}px`,
+        "--inspector-width": `${controlsWidth}px`,
+      }}
+      data-package-collapsed={layout.packageCollapsed}
+      data-inspector-collapsed={layout.inspectorCollapsed}
+      data-mobile-panel={mobilePanel || "none"}
+    >
       <header className="header">
         <a
           className="brand"
@@ -944,6 +1041,81 @@ function App({ initialDraft, storageError = "" }) {
               </button>
             </div>
           </div>
+          <div className="editor-viewbar" aria-label="Editor view">
+            <div className="desktop-panel-buttons">
+              <button
+                type="button"
+                aria-expanded={!layout.packageCollapsed}
+                onClick={() =>
+                  updateLayout({ packageCollapsed: !layout.packageCollapsed })
+                }
+              >
+                Package settings
+              </button>
+              <button
+                type="button"
+                aria-expanded={!layout.inspectorCollapsed}
+                onClick={() =>
+                  updateLayout({
+                    inspectorCollapsed: !layout.inspectorCollapsed,
+                  })
+                }
+              >
+                Icon controls
+              </button>
+            </div>
+            <div className="mobile-panel-buttons">
+              <button
+                type="button"
+                aria-label="Package controls"
+                aria-expanded={mobilePanel === "package"}
+                onClick={() => openMobilePanel("package")}
+              >
+                Package
+              </button>
+              <button
+                type="button"
+                aria-label="Color controls"
+                aria-expanded={
+                  mobilePanel === "controls" && inspectorTab === "colors"
+                }
+                onClick={() => openMobilePanel("controls", "colors")}
+              >
+                Colors
+              </button>
+              <button
+                type="button"
+                aria-label="Animation controls"
+                aria-expanded={
+                  mobilePanel === "controls" && inspectorTab === "animation"
+                }
+                onClick={() => openMobilePanel("controls", "animation")}
+              >
+                Animation
+              </button>
+            </div>
+            <button type="button" onClick={openDownloads}>
+              Downloads
+            </button>
+            <button
+              type="button"
+              className="editor-focus-toggle"
+              aria-pressed={focusMode}
+              onClick={() => setFocusMode(!focusMode)}
+            >
+              {focusMode ? "Exit editor view" : "Expand editor"}
+            </button>
+            <button
+              type="button"
+              className="reset-editor-layout"
+              onClick={() => {
+                resetLayout();
+                setMobilePanel(null);
+              }}
+            >
+              Reset layout
+            </button>
+          </div>
           <input
             ref={input}
             id="svg-input"
@@ -956,11 +1128,19 @@ function App({ initialDraft, storageError = "" }) {
             disabled={reading}
             onChange={(event) => addFiles(event.target.files)}
           />
-          <div className="workspace-body">
+          <div className="workspace-body" ref={setBodyNode}>
             <aside className="settings">
               <div className="settings-heading">
                 <h3>Make it yours</h3>
                 <span>01 — CONFIGURE</span>
+                <button
+                  type="button"
+                  className="mobile-sheet-close"
+                  aria-label="Close package settings"
+                  onClick={() => setMobilePanel(null)}
+                >
+                  ×
+                </button>
               </div>
               <fieldset className="color-mode output-mode">
                 <legend className="field-label">Output</legend>
@@ -1098,6 +1278,14 @@ function App({ initialDraft, storageError = "" }) {
                 </p>
               </div>
             </aside>
+            <PanelSeparator
+              label="Resize package settings panel"
+              value={packageWidth}
+              min={180}
+              max={packageMax}
+              onChange={(packageWidth) => updateLayout({ packageWidth })}
+              reset={() => updateLayout({ packageWidth: 220 })}
+            />
             <div className="stage">
               <div
                 className="featured-samples"
@@ -1386,21 +1574,10 @@ function App({ initialDraft, storageError = "" }) {
                 ? `Export ${current?.name || "your icon"} directly. The React component scopes local IDs to each instance.`
                 : "Your sprite, hashed assets, source icons, manifest, and React snippet. All packed up."}
             </p>
-            <div className="animation-export-entry">
-              <button
-                type="button"
-                className="button secondary"
-                disabled={!ready}
-                onClick={openAnimationExport}
-              >
-                <Glyph name="download" size={18} />
-                Open animation export
-              </button>
-              <p>
-                For an animated ZIP: open <b>Fill animation</b>, enable it, then
-                choose <b>Export animation ZIP</b> beside the Timeline.
-              </p>
-            </div>
+            <div
+              id="animation-export-slot"
+              className="animation-export-entry"
+            />
             <button
               className="button primary export-button"
               onClick={() =>

@@ -100,7 +100,7 @@ try {
     .getByLabel(`Dark color ${paints[0]}`, { exact: true })
     .fill("#fb923c");
   await page
-    .getByRole("button", { name: "Open animation export", exact: true })
+    .getByRole("button", { name: "Set up animation", exact: true })
     .click();
   assert.equal(
     await page
@@ -171,6 +171,7 @@ try {
       },
     });
   });
+  await page.locator(".animation-integration > summary").click();
   await page
     .getByRole("button", { name: "Copy AI prompt", exact: true })
     .click();

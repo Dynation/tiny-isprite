@@ -8,6 +8,7 @@ import {
   drawFillMask,
   radialCss,
 } from "./lib/fill-animation.js";
+import { createPortal } from "react-dom";
 import { RegionOverlay } from "./RegionOrigins.jsx";
 import { download } from "./lib/project.js";
 import {
@@ -36,6 +37,8 @@ export function FillAnimation({
   initiallyEnabled = false,
   initialState,
   onStateChange,
+  sourceReady = true,
+  onConfigure,
   name = "icon",
   palettes = { light: {}, dark: {} },
   defaultTheme = "light",
@@ -128,6 +131,12 @@ export function FillAnimation({
   const [viewportRatio, setViewportRatio] = useState(aspectRatio);
   const analysisRatio = regionMode ? aspectRatio : viewportRatio;
   const [error, setError] = useState("");
+  const [exportHost, setExportHost] = useState(null),
+    [timelineHost, setTimelineHost] = useState(null);
+  useEffect(() => {
+    setExportHost(document.getElementById("animation-export-slot"));
+    setTimelineHost(document.getElementById("animation-timeline-slot"));
+  }, []);
   const [copyNotice, setCopyNotice] = useState("");
   const [showGuide, setShowGuide] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -287,7 +296,7 @@ export function FillAnimation({
     setPrepared(null);
     setError("");
     clearMask();
-    if (!enabled || !svg || !active) return;
+    if (!enabled || !svg) return;
     let disposed = false;
     prepareFillField(svg, variables, analysisX, analysisY, analysisRatio)
       .then((value) => {
@@ -300,7 +309,13 @@ export function FillAnimation({
       disposed = true;
       clearMask();
     };
-  }, [enabled, svg, analysisX, analysisY, active, analysisRatio, regionMode]);
+  }, [enabled, svg, analysisX, analysisY, analysisRatio, regionMode]);
+  useEffect(() => {
+    if (!active) {
+      stop();
+      clearMask();
+    }
+  }, [active]);
   useEffect(() => {
     stop();
   }, [mode, signature, x, y, regionMode]);
@@ -409,7 +424,7 @@ export function FillAnimation({
     }
   }
   async function exportAnimation() {
-    if (!prepared || exporting) return;
+    if (!enabled || !sourceReady || !prepared || exporting) return;
     stop();
     setExporting(true);
     setExportNotice("");
@@ -446,21 +461,10 @@ export function FillAnimation({
   const css = radialCss(x, y, tracks[0].duration);
   return (
     <section className="fill-animation" aria-label="Optional fill animation">
-      <label className="animation-enable">
-        <input
-          id="enable-fill-animation"
-          type="checkbox"
-          checked={enabled}
-          onChange={(event) => {
-            stop();
-            setEnabled(event.target.checked);
-            setProgress(100);
-          }}
-        />
-        Enable fill animation
-      </label>
-      {enabled && (
-        <>
+      {timelineHost &&
+        enabled &&
+        active &&
+        createPortal(
           <div className="animation-playback">
             <button
               type="button"
@@ -487,34 +491,58 @@ export function FillAnimation({
                 }}
               />
             </label>
+          </div>,
+          timelineHost,
+        )}
+      {exportHost &&
+        createPortal(
+          <div className="animation-export-tools">
             <button
               type="button"
               className="button primary animation-export-action"
-              disabled={!prepared || !!error || !!timing.error || exporting}
+              disabled={
+                !enabled ||
+                !sourceReady ||
+                !prepared ||
+                !!error ||
+                !!timing.error ||
+                exporting
+              }
               onClick={exportAnimation}
             >
               {exporting ? "Preparing animation ZIP…" : "Export animation ZIP"}
             </button>
-          </div>
-          <div className="animation-integration">
-            <button
-              type="button"
-              className="button secondary"
-              onClick={copyAiPrompt}
-            >
-              Copy AI prompt
-            </button>
-            <p>
-              Copies text only. Download the animation ZIP and attach it to your
-              chat, or give your coding agent the path to the extracted folder.
-              Files are not sent automatically.
-            </p>
-            {copyNotice && <p role="status">{copyNotice}</p>}
+            {!enabled && (
+              <p>
+                Enable Fill animation to prepare an animated export.{" "}
+                <button
+                  type="button"
+                  className="palette-copy"
+                  onClick={onConfigure}
+                >
+                  Set up animation
+                </button>
+              </p>
+            )}
             <details
+              className="animation-integration"
               open={showGuide}
               onToggle={(event) => setShowGuide(event.currentTarget.open)}
             >
               <summary>How to use your animation ZIP</summary>
+              <button
+                type="button"
+                className="button secondary"
+                onClick={copyAiPrompt}
+              >
+                Copy AI prompt
+              </button>
+              <p>
+                Copies text only. Download the animation ZIP and attach it to
+                your chat, or give your coding agent the path to the extracted
+                folder. Files are not sent automatically.
+              </p>
+              {copyNotice && <p role="status">{copyNotice}</p>}
               <ol>
                 <li>
                   Export and extract the animation ZIP. Open README.md for the
@@ -552,7 +580,29 @@ export function FillAnimation({
                 />
               </label>
             </details>
-          </div>
+            {exportNotice && (
+              <p role="status" className="animation-export-notice">
+                {exportNotice}
+              </p>
+            )}
+          </div>,
+          exportHost,
+        )}
+      <label className="animation-enable">
+        <input
+          id="enable-fill-animation"
+          type="checkbox"
+          checked={enabled}
+          onChange={(event) => {
+            stop();
+            setEnabled(event.target.checked);
+            setProgress(100);
+          }}
+        />
+        Enable fill animation
+      </label>
+      {enabled && (
+        <>
           <div className="animation-status" role="status">
             {error ||
               timing.error ||
@@ -833,11 +883,6 @@ export function FillAnimation({
             website. No playground or animation server is needed. Regular
             SVG/React downloads remain static.
           </p>
-          {exportNotice && (
-            <p role="status" className="animation-export-notice">
-              {exportNotice}
-            </p>
-          )}
           <details>
             <summary>CSS-only radial example</summary>
             <p>

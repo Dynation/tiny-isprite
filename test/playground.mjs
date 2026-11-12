@@ -132,15 +132,7 @@ try {
     ),
     false,
   );
-  assert.ok(
-    await page
-      .locator(".stage")
-      .evaluate(
-        (el) =>
-          el.getBoundingClientRect().top <
-          document.querySelector(".settings").getBoundingClientRect().top,
-      ),
-  );
+  assert.equal(await page.locator(".settings").isVisible(), false);
   await page.screenshot({
     path: path.join(artifacts, "launch-mobile-dark.png"),
     fullPage: true,
@@ -954,7 +946,7 @@ try {
       .locator(".fill-animation")
       .evaluate(
         (el) =>
-          el
+          document
             .querySelector(".animation-playback")
             .compareDocumentPosition(el.querySelector(".animation-controls")) &
           Node.DOCUMENT_POSITION_FOLLOWING,
