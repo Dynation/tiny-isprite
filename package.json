@@ -46,7 +46,7 @@
     "test:compat": "npm run build && node test/compatibility.mjs",
     "test:production": "node test/production.mjs",
     "check:release": "npm run typecheck && npm test && npm run test:compat && npm run test:browser && npm run test:production && npm audit",
-    "prepare": "npm run build"
+    "prepare": "npm run build 1>&2"
   },
   "keywords": [
     "svg",
