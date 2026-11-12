@@ -255,7 +255,11 @@ keyboard focus to the highlighted input or button.
    is the final percentage. Start/Duration use 0.01-second steps; regions may overlap.
 6. Place origin on artwork enables point placement; the next artwork click moves
    this region's inlet. An ordinary click only selects a region.
-7. Play fill or scrub the timeline beneath the artwork.
+7. Play fill or scrub the timeline beneath the artwork. For sequential animation,
+   find the moment where the next region should start, read the current time in
+   seconds, and enter it in that region's Start. For example, the atom's next orbit
+   can begin as the previous one finishes, or slightly earlier for overlap. Start
+   is always measured from timeline zero, not from the previous region.
 8. Downloads → Export animation ZIP. The separate SVG/React downloads stay static;
    How to use your animation ZIP contains the integration guide.
 

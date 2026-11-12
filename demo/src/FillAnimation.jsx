@@ -574,7 +574,7 @@ export function FillAnimation({
     {
       selector: ".animation-playback",
       title: "Preview the result",
-      body: "Press Play fill, or drag the timeline beneath the artwork to inspect a moment. Colors and Fill animation keep your edits when you switch tabs. Reduced motion keeps playback paused.",
+      body: "Press Play fill or drag the timeline to inspect a moment. For a sequence, find where the next region should begin, read the current time in seconds, and enter it as that region’s Start. For example, start the atom’s next orbit when the previous one finishes—or a little earlier to overlap. Start is measured from timeline zero.",
     },
     {
       selector: ".animation-export-action",
