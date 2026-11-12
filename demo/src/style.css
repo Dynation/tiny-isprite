@@ -1904,25 +1904,140 @@ html[data-page-theme="dark"] {
   min-height: 160px;
 }
 .support-note {
-  display: flex;
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  border-block: 1px solid var(--border);
-  padding: 24px 0;
-  margin: 24px 0;
+  gap: 22px;
+  position: relative;
+  border: 2px solid #e9b768;
+  border-radius: 14px;
+  padding: 28px 30px;
+  margin: 32px 0;
+  background: linear-gradient(115deg, #fff3d8, #fff9ed 60%, #eef3ff);
+  box-shadow: 0 8px 30px #b57d2020;
+}
+.support-note::before,
+.support-note::after {
+  content: "";
+  position: absolute;
+  width: 72px;
+  height: 18px;
+  background: repeating-linear-gradient(
+    85deg,
+    #3269f0e8 0 12px,
+    #245cf3e8 12px 24px
+  );
+  border-inline: 1px dashed #c4d5ff88;
+  pointer-events: none;
+}
+.support-note::before {
+  left: 26px;
+  top: -10px;
+  transform: rotate(-7deg);
+}
+.support-note::after {
+  right: 26px;
+  bottom: -9px;
+  width: 56px;
+  transform: rotate(5deg);
+}
+.support-cup {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  background: #fff9e9;
+  color: #8a5107;
+  border: 1px solid #e9bf7e;
+}
+.support-kicker {
+  display: block;
+  margin-bottom: 7px;
+  color: #8a5107;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
 }
 .support-note h3 {
   margin: 0 0 8px;
-  font-size: 17px;
+  font-size: clamp(20px, 2vw, 25px);
+  color: #292c39;
+  letter-spacing: -0.025em;
 }
 .support-note p {
   margin: 0;
+  max-width: 65ch;
   font-size: 13px;
-  color: #6b7565;
+  line-height: 1.6;
+  color: #555568;
 }
-.support-note a {
-  flex-shrink: 0;
+.support-note .support-coffee {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 20px;
+  background: #ffd17a;
+  color: #292719;
+  border: 1px solid #dc9c30;
+  box-shadow: 0 4px 0 #b47c2633;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s;
+}
+.support-note .support-coffee:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 0 #b47c2633;
+  background: #ffdc9a;
+}
+html[data-page-theme="dark"] .support-note {
+  background: linear-gradient(115deg, #30291e, #242738 65%, #1d2d4a);
+  border-color: #a27c43;
+  box-shadow: 0 8px 35px #0003;
+}
+html[data-page-theme="dark"] .support-note h3 {
+  color: #fff1d3;
+}
+html[data-page-theme="dark"] .support-note p {
+  color: #c7cddd;
+}
+html[data-page-theme="dark"] .support-kicker {
+  color: #f0c477;
+}
+html[data-page-theme="dark"] .support-cup {
+  background: #40331f;
+  color: #ffd17a;
+  border-color: #8b6b3b;
+}
+@media (max-width: 720px) {
+  .support-note {
+    grid-template-columns: 46px minmax(0, 1fr);
+    padding: 22px 16px;
+    gap: 14px;
+  }
+  .support-cup {
+    width: 46px;
+    height: 52px;
+    border-radius: 12px;
+  }
+  .support-note .support-coffee {
+    grid-column: 1 / -1;
+    width: 100%;
+    margin-top: 4px;
+  }
+  .support-kicker {
+    font-size: 9px;
+    letter-spacing: 0.09em;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .support-note .support-coffee {
+    transition: none;
+  }
 }
 .developer-setup .install {
   max-width: 360px;

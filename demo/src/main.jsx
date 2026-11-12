@@ -51,6 +51,8 @@ const symbols = {
   close: "m6 6 12 12M6 18 18 6",
   refresh: "M20 7v5h-5M4 17v-5h5M6 6a8 8 0 0 1 14 6M4 12a8 8 0 0 0 14 6",
   file: "M5 3h9l5 5v13H5zM14 3v6h5",
+  coffee:
+    "M4 8h12v7a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V8Zm12 1h2a3 3 0 0 1 0 6h-2M3 22h15M7 2v3m4-3v3m4-3v3",
 };
 function Glyph({ name, size = 18, ...props }) {
   return (
@@ -1698,12 +1700,19 @@ function App({ initialDraft, storageError = "" }) {
           </aside>
         </section>
         <section className="support-note" aria-label="Support the project">
-          <div>
-            <h3>Enjoying the playground?</h3>
-            <p>Your support helps me build more little tools like this.</p>
+          <div className="support-cup" aria-hidden="true">
+            <Glyph name="coffee" size={34} />
+          </div>
+          <div className="support-copy">
+            <span className="support-kicker">You + blue tape + coffee</span>
+            <h3>Coffee keeps the banners away.</h3>
+            <p>
+              Enjoying the editor? Buy me a coffee before I have to wallpaper it
+              with ads.
+            </p>
           </div>
           <a
-            className="button secondary"
+            className="button support-coffee"
             href="https://ko-fi.com/dynation"
             target="_blank"
             rel="noreferrer"
