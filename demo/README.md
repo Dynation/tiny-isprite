@@ -218,10 +218,10 @@ Short landscape screens prioritize scrollable controls. The regional timing edit
 also uses a bottom sheet on phones.
 
 Preview zoom is independent of export dimensions. The canvas toolbar offers
-minus/plus (100–1600%), Fit, and a Hand tool. Ctrl/Command + wheel or trackpad
-pinch zooms around the pointer inside the canvas. Scrollbars, Hand drag,
+minus/plus (100–1600%), Fit, and a paw-shaped Pan tool. Ctrl/Command + wheel or trackpad
+pinch zooms around the pointer inside the canvas. Scrollbars, Pan-tool drag,
 Space + drag with canvas focus, and middle-button drag move around enlarged
-artwork. Touch users can scroll the enlarged canvas or enable Hand to drag it.
+artwork. Touch users can scroll the enlarged canvas or enable the Pan tool to drag it.
 Panning suppresses region-selection/origin-placement clicks. The artwork and
 region overlay share one scroll plane, so SVG screen coordinates account for
 zoom and scroll. Fit returns to the complete artwork. Switching icons resets
@@ -229,7 +229,7 @@ the view; palette, timing and tab edits preserve it. Zoom is not baked into SVGs
 React components or animation exports.
 
 `node test/preview-zoom.mjs` checks selection of 1–2px regions at high zoom,
-origin coordinates after scrolling, Hand/Space dragging over the portal overlay,
+origin coordinates after scrolling, Pan/Space dragging over the portal overlay,
 scoped wheel zoom, Fit, mobile controls and byte-identical static SVG downloads.
 
 `node test/editor-layout.mjs` checks pointer and keyboard resizing, saved layout,

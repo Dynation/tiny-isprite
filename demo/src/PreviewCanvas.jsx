@@ -1,4 +1,5 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { PawIcon } from "./PawIcon.jsx";
 
 // View-only zoom. The artwork and region overlay share one scrollable plane;
 // neither the SVG source nor exported sizes/animation coordinates are changed.
@@ -167,9 +168,9 @@ export function PreviewCanvas({ children }) {
           aria-label="Pan preview"
           aria-pressed={hand}
           onClick={() => setHand(!hand)}
-          title="Drag to pan. You can also hold Space or use the middle mouse button."
+          title="Pan preview — drag to move the canvas. You can also hold Space or use the middle mouse button."
         >
-          Hand
+          <PawIcon />
         </button>
         <span className="canvas-zoom-help">View only · Ctrl + wheel</span>
       </div>

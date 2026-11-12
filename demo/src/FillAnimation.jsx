@@ -575,7 +575,7 @@ export function FillAnimation({
     {
       selector: ".region-origin-controls > label",
       title: "Choose a region",
-      body: "Click a painted area on the artwork, or choose it in Selected region. The blue highlight identifies it. For thin lines, zoom with + or Ctrl + wheel; turn Hand off before selecting.",
+      body: "Click a painted area on the artwork, or choose it in Selected region. The blue highlight identifies it. For thin lines, zoom with + or Ctrl + wheel; turn the paw-shaped Pan tool off before selecting.",
       canNext: !!selectedRegion,
     },
     {
@@ -596,7 +596,7 @@ export function FillAnimation({
     {
       selector: ".preview-viewport",
       title: "Place the starting point visually",
-      body: "Click anywhere on the artwork to place the selected region’s origin. Normally, use Place origin on artwork first; a regular click only selects a region. Hand must be off.",
+      body: "Click anywhere on the artwork to place the selected region’s origin. Normally, use Place origin on artwork first; a regular click only selects a region. The Pan tool must be off.",
       canNext: !regions.placing,
       hint: regions.placing
         ? "Click the artwork to place the point, then continue."
