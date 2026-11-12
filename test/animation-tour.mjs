@@ -49,15 +49,13 @@ try {
     const errors = [];
     page.on("pageerror", (e) => errors.push(e.message));
     await page.goto(url);
-    await page
-      .getByLabel("Upload SVG files", { exact: true })
-      .setInputFiles({
-        name: "tour.svg",
-        mimeType: "image/svg+xml",
-        buffer: Buffer.from(
-          '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 100"><path fill="#ef4444" d="M10 10h60v70H10z M120 10h60v70h-60z"/></svg>',
-        ),
-      });
+    await page.getByLabel("Upload SVG files", { exact: true }).setInputFiles({
+      name: "tour.svg",
+      mimeType: "image/svg+xml",
+      buffer: Buffer.from(
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 100"><path fill="#ef4444" d="M10 10h60v70H10z M120 10h60v70h-60z"/></svg>',
+      ),
+    });
     await poll(
       async () =>
         (await page.locator(".icon-inspector h3").textContent()) === "tour",
@@ -70,7 +68,7 @@ try {
     const tour = page.locator(".animation-tour-popover");
     const next = () =>
       tour.getByRole("button", { name: "Next", exact: true }).click();
-    async function at(number) {
+    async function at(number, total = 6) {
       await poll(async () => {
         const count = await tour
           .locator("header span")
@@ -78,7 +76,7 @@ try {
           .catch(() => null);
         const box = await tour.boundingBox();
         return (
-          count === `Step ${number} of 8` &&
+          count === `Step ${number} of ${total}` &&
           box &&
           box.x >= 0 &&
           box.y >= 0 &&
@@ -101,6 +99,39 @@ try {
       .check();
     await next();
     await at(2);
+    await poll(
+      () => tour.getByRole("button", { name: "Next", exact: true }).isEnabled(),
+      "prepared simple controls",
+    );
+    await next();
+    await at(3);
+    await next();
+    await at(4);
+    await next();
+    await at(5);
+    assert.ok((await tour.textContent()).includes("under 10 analysis samples"));
+    await page.screenshot({
+      path: path.join(
+        repo,
+        `.release-artifacts/animation-tour/${width}-perfectionism.png`,
+      ),
+    });
+    await next();
+    await at(6);
+    assert.equal(await page.locator(".region-editor-popover").count(), 0);
+    assert.equal(
+      await page.locator(".region-mode-toggle input").isChecked(),
+      false,
+    );
+    // Back to the fork and take the optional advanced path.
+    await tour.getByRole("button", { name: "Back", exact: true }).click();
+    await at(5);
+    await tour.getByRole("button", { name: /^Perfectionism mode/ }).click();
+    await at(6, 11);
+    assert.equal(
+      await tour.getByRole("button", { name: "Next", exact: true }).isEnabled(),
+      false,
+    );
     await page
       .getByRole("checkbox", { name: "Separate region origins", exact: true })
       .check();
@@ -109,25 +140,25 @@ try {
       "regions ready",
     );
     await next();
-    await at(3);
+    await at(7, 11);
     await page.getByLabel("Selected region", { exact: true }).selectOption("1");
     await next();
-    await at(4);
+    await at(8, 11);
     await page.getByLabel("Region origin X", { exact: true }).fill("72.3");
     await page.getByLabel("Region origin Y", { exact: true }).fill("42.5");
     await next();
-    await at(5);
+    await at(9, 11);
     await page.getByLabel("Region start", { exact: true }).fill("0.13");
     await page.getByLabel("Region duration", { exact: true }).fill("0.27");
     await page.getByLabel("Region end fill", { exact: true }).fill("65");
     await tour.getByRole("button", { name: "Back", exact: true }).click();
-    await at(4);
+    await at(8, 11);
     assert.equal(
       await page.getByLabel("Region origin X", { exact: true }).inputValue(),
       "72.3",
     );
     await next();
-    await at(5);
+    await at(9, 11);
     assert.equal(
       await page.getByLabel("Region start", { exact: true }).inputValue(),
       "0.13",
@@ -139,7 +170,7 @@ try {
       ),
     });
     await next();
-    await at(6);
+    await at(10, 11);
     assert.equal(
       await tour.getByRole("button", { name: "Next", exact: true }).isEnabled(),
       false,
@@ -158,11 +189,18 @@ try {
     await poll(
       () => tour.getByRole("button", { name: "Next", exact: true }).isEnabled(),
       "origin placed",
-    );
+      5000,
+    ).catch(async (error) => {
+      await page.screenshot({
+        path: path.join(
+          repo,
+          `.release-artifacts/animation-tour/${width}-point-failure.png`,
+        ),
+      });
+      throw error;
+    });
     await next();
-    await at(7);
-    await next();
-    await at(8);
+    await at(11, 11);
     const wait = page.waitForEvent("download");
     await page
       .getByRole("button", { name: "Export animation ZIP", exact: true })
@@ -204,6 +242,23 @@ try {
     await at(3);
     await next();
     await at(4);
+    await next();
+    await at(5);
+    await tour.getByRole("button", { name: /^Perfectionism mode/ }).click();
+    await at(6, 11);
+    await tour.getByRole("button", { name: "Back", exact: true }).click();
+    await at(5, 11);
+    // Next at the fork still means the short route after returning from advanced.
+    await next();
+    await at(6);
+    await tour.getByRole("button", { name: "Back", exact: true }).click();
+    await at(5);
+    await tour.getByRole("button", { name: /^Perfectionism mode/ }).click();
+    await at(6, 11);
+    await next();
+    await at(7, 11);
+    await next();
+    await at(8, 11);
     await page.keyboard.press("Escape");
     await poll(
       async () =>
@@ -215,7 +270,7 @@ try {
     await page.close();
   }
   console.log(
-    "PASS desktop/phone guided editing with real enabled controls, highlights, region popover edits, Back/Next, point placement, actual ZIP, Done/Skip/Escape",
+    "PASS desktop/phone quick route skips regional edits; optional fifth-step perfectionist route edits and exports; branch Back/Next and Done/Skip/Escape preserve settings",
   );
 } finally {
   await browser?.close();

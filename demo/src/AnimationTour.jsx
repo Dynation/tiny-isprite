@@ -52,11 +52,20 @@ export function AnimationTour({ index, steps, onStep, onClose }) {
     // Let mobile sheets and the region dialog mount before scrolling to a target.
     scrollFrame = requestAnimationFrame(() => {
       scrollFrame = requestAnimationFrame(() => {
-        document.querySelector(selector)?.scrollIntoView({
-          block: "nearest",
-          inline: "nearest",
-          behavior: "instant",
-        });
+        const node = document.querySelector(selector);
+        const canvasStep =
+          selector === ".preview-viewport" ||
+          selector === ".animation-playback";
+        if (canvasStep && innerWidth <= 1000)
+          node
+            ?.closest(".preview-column")
+            ?.scrollIntoView({ block: "start", behavior: "instant" });
+        else
+          node?.scrollIntoView({
+            block: "nearest",
+            inline: "nearest",
+            behavior: "instant",
+          });
         panel.current?.focus({ preventScroll: true });
       });
     });
@@ -208,6 +217,16 @@ export function AnimationTour({ index, steps, onStep, onClose }) {
           <p className="tour-hint" role="status">
             {step.hint}
           </p>
+        )}
+        {step.action && (
+          <button
+            type="button"
+            className="tour-branch"
+            disabled={!box}
+            onClick={step.action.onClick}
+          >
+            {step.action.label} ↗
+          </button>
         )}
         {!box && <p role="status">Preparing this control…</p>}
         <button

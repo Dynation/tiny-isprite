@@ -3104,3 +3104,26 @@ html[data-page-theme="dark"] .animation-tour-popover header {
   overflow: visible;
   pointer-events: none;
 }
+
+.animation-tour-popover .tour-branch {
+  display: block;
+  width: 100%;
+  padding: 9px 12px;
+  margin: 12px 0 4px;
+  border: 1px solid #bb851e;
+  border-radius: 6px;
+  background: #fff0cb;
+  color: #5d410f;
+  font-weight: 700;
+  text-align: left;
+}
+html[data-page-theme="dark"] .animation-tour-popover .tour-branch {
+  background: #42351d;
+  border-color: #b58d45;
+  color: #ffe2a6;
+}
+.region-origin-controls .region-size-note {
+  padding: 8px 10px;
+  border-left: 2px solid #c29143;
+  font-size: 11px;
+}

@@ -239,37 +239,39 @@ preview/timeline visibility at 390px and 320px. It is part of test:playground.
 ### Guided animation editing
 
 Open Fill animation and choose **Show me how** above Enable fill animation.
-The eight-step walkthrough highlights the actual control, points to it from a
-popover, and offers Back, Next, Skip tour and Escape. It can be restarted at any
-time and does not replace the current artwork or load a different example.
-Controls and the canvas remain interactive throughout. Go to control moves
-keyboard focus to the highlighted input or button.
+The short route highlights real controls with an arrow and a popover:
 
 1. Enable fill animation (already enabled on featured examples).
-2. Enable Separate region origins; wait for the region map to be ready.
-3. Click a painted region or choose Selected region. Zoom helps with thin lines;
-   Hand must be off when selecting or placing points.
-4. Edit region settings opens X/Y controls. Double-click is an alternative. On
-   phones the same editing form uses a bottom sheet.
-5. Start is the delay from timeline zero, Duration is the fill time, and End fill
-   is the final percentage. Start/Duration use 0.01-second steps; regions may overlap.
-6. Place origin on artwork enables point placement; the next artwork click moves
-   this region's inlet. An ordinary click only selects a region.
-7. Play fill or scrub the timeline beneath the artwork. For sequential animation,
-   find the moment where the next region should start, read the current time in
-   seconds, and enter it in that region's Start. For example, the atom's next orbit
-   can begin as the previous one finishes, or slightly earlier for overlap. Start
-   is always measured from timeline zero, not from the previous region.
-8. Downloads → Export animation ZIP. The separate SVG/React downloads stay static;
-   How to use your animation ZIP contains the integration guide.
+2. Choose the fill effect and shared origin.
+3. Start with per-color Start, Duration and End fill. Region overrides keep their
+   own settings. Start/Duration use 0.01-second steps.
+4. Play or scrub the timeline. Read the current seconds and use them for the next
+   color/region's Start; this is time from timeline zero. Orbits can follow one
+   another or overlap.
+5. **Perfectionism?** Regions under 10 analysis samples often make little visible
+   difference. At 1–2 points there is little room for a spreading fill; these may
+   be SVG leftovers or rasterization specks. Samples are analysis-grid points,
+   not a measure of original SVG detail. Use the preview to decide what matters.
+6. **Next** skips individual-region editing and goes straight to ZIP export.
 
-The tour opens the editing popover and arms point placement at the relevant step;
-Next waits for required setup/placement. Back keeps edits. Done, Skip tour and
-Escape remove highlights and cancel unfinished placement. Export remains an
-explicit button click. Tour state is transient and is not saved into local drafts.
-`test/animation-tour.mjs` verifies the complete live editing/export flow at desktop,
-390px and 320px widths, including changed regional timing, point placement,
-Back/Next and Done/Skip/Escape recovery.
+At step five, **Perfectionism mode** opens the optional detour: enable Separate
+region origins, choose a region, edit its X/Y and timing in the popover, then place
+its inlet on the artwork. That route has eleven steps. The same fields appear in
+a bottom sheet on phones. Tiny regions remain selectable and keep their original
+settings; this feature does not delete, suppress, retime or zero them. The region
+list marks entries under 10 samples as tiny details and uses singular sample for
+one analysis point.
+
+Back, Next, Skip tour, Done and Escape are available; Go to control moves keyboard
+focus to the highlighted element. Controls stay interactive. Next at the fork
+always means the short route, even after returning with Back from the advanced
+branch. Back from export reopens the controls. Done/Skip/Escape cancel unfinished
+point placement; completed edits remain. Export is still an explicit button click.
+Tour state is transient and is not saved into local drafts. The complete JS/React
+animation is in Export animation ZIP; separate SVG/React downloads stay static.
+
+`test/animation-tour.mjs` checks both routes at 1440/390/320px, branch navigation,
+real regional timing/origin edits in ZIP exports, and Done/Skip/Escape recovery.
 
 ### First visit and page theme
 

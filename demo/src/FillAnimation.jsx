@@ -53,6 +53,7 @@ export function FillAnimation({
 }) {
   const saved = initialState || {};
   const [tourStep, setTourStep] = useState(-1);
+  const [tourAdvanced, setTourAdvanced] = useState(false);
   const tourTrigger = useRef(null);
   const [enabled, setEnabled] = useState(saved.enabled ?? initiallyEnabled);
   const [mode, setMode] = useState(saved.mode || "flow");
@@ -504,23 +505,24 @@ export function FillAnimation({
     setTourStep(-1);
     if (regions.placing || regions.editing)
       changeRegions({ placing: false, editing: false });
-    if (tourStep < 7)
+    if (tourStep < 10)
       requestAnimationFrame(() =>
         tourTrigger.current?.focus({ preventScroll: true }),
       );
   }
   function tourTo(step) {
-    if (step === 3 || step === 4) openRegionEditor(regions.selected);
-    else if (step === 5) changeRegions({ editing: false, placing: true });
+    if (tourStep === 10 && step !== 10) onConfigure?.();
+    if (step === 7 || step === 8) openRegionEditor(regions.selected);
+    else if (step === 9) changeRegions({ editing: false, placing: true });
     else if (regions.editing || regions.placing)
       changeRegions({ editing: false, placing: false });
-    if (step === 7) onShowDownloads?.();
+    if (step === 10) onShowDownloads?.();
     setTourStep(step);
   }
   useEffect(() => {
     if (!active && tourStep >= 0) closeTour();
     else if (tourStep > 0 && !enabled) setTourStep(0);
-    else if (tourStep > 2 && tourStep < 6 && !regionMode) setTourStep(1);
+    else if (tourStep > 5 && tourStep < 10 && !regionMode) setTourStep(5);
   }, [active, enabled, regionMode, tourStep]);
   const tourSteps = [
     {
@@ -529,6 +531,35 @@ export function FillAnimation({
       body: "Open Fill animation, then turn on Enable fill animation. Ready-made examples already have it on. Flow inside shape follows the artwork; Radial from point spreads outward.",
       canNext: enabled,
       hint: !enabled ? "Turn on the checkbox to continue." : undefined,
+    },
+    {
+      selector: ".fill-animation > .animation-controls",
+      title: "Choose the fill effect",
+      body: "Flow inside shape follows the painted artwork. Radial from point spreads outward. Origin X and Y choose the shared starting point; regions with a custom origin keep their own point.",
+      canNext: !!prepared,
+    },
+    {
+      selector: ".animation-tracks > fieldset",
+      title: "Start with color timing",
+      body: "Use Start, Duration and End fill for each color. Start is measured from timeline zero; Duration is the fill time. Both use 0.01-second steps. Regions with custom timing keep their overrides. You do not need to tune every tiny region.",
+      canNext: !!prepared,
+    },
+    {
+      selector: ".animation-playback",
+      title: "Sequence with the timeline",
+      body: "Play or scrub to find where the next color or region should begin. Read the current seconds and use that time as its Start. For the atom, begin the next orbit as the previous one finishes—or earlier for overlap. Start is always measured from timeline zero.",
+    },
+    {
+      selector: ".region-mode-toggle",
+      title: "Perfectionism?",
+      body: "Regions under 10 analysis samples often make little visible difference. At 1–2 samples there is barely room for a fill to spread. These can be SVG leftovers or rasterization specks. Leave them alone until you see a reason to tune them! Samples are analysis points, not SVG pixels. Next goes to export; the perfectionist detour lets you edit every region.",
+      action: {
+        label: "Perfectionism mode",
+        onClick: () => {
+          setTourAdvanced(true);
+          tourTo(5);
+        },
+      },
     },
     {
       selector: ".region-mode-toggle",
@@ -572,16 +603,22 @@ export function FillAnimation({
         : "Point placed. You can continue.",
     },
     {
-      selector: ".animation-playback",
-      title: "Preview the result",
-      body: "Press Play fill or drag the timeline to inspect a moment. For a sequence, find where the next region should begin, read the current time in seconds, and enter it as that region’s Start. For example, start the atom’s next orbit when the previous one finishes—or a little earlier to overlap. Start is measured from timeline zero.",
-    },
-    {
       selector: ".animation-export-action",
       title: "Take the animation with you",
       body: "Downloads brings you here. Export animation ZIP includes the prepared animation, HTML example and React integration. Regular SVG and React downloads are static. Open How to use your animation ZIP for setup help.",
     },
   ];
+  const tourRoute = tourAdvanced
+    ? [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    : [0, 1, 2, 3, 4, 10];
+  const tourIndex = tourRoute.indexOf(tourStep);
+  function navigateTour(index) {
+    // Next at the fork always offers the short path, including after Back.
+    if (tourStep === 4 && index > tourIndex) {
+      setTourAdvanced(false);
+      tourTo(10);
+    } else tourTo(tourRoute[index]);
+  }
   const css = radialCss(x, y, tracks[0].duration);
   return (
     <section className="fill-animation" aria-label="Optional fill animation">
@@ -727,6 +764,7 @@ export function FillAnimation({
                 '.canvas-tools button[aria-label="Pan preview"][aria-pressed="true"]',
               )
               ?.click();
+            setTourAdvanced(false);
             setTourStep(0);
           }}
         >
@@ -734,9 +772,9 @@ export function FillAnimation({
         </button>
       </div>
       <AnimationTour
-        index={tourStep}
-        steps={tourSteps}
-        onStep={tourTo}
+        index={tourIndex}
+        steps={tourRoute.map((step) => tourSteps[step])}
+        onStep={navigateTour}
         onClose={closeTour}
       />
       <label className="animation-enable">
@@ -837,7 +875,9 @@ export function FillAnimation({
                     <option key={region.id} value={region.id}>
                       Region {region.id + 1} ·{" "}
                       {groups[region.group]?.property || "Paint"} ·{" "}
-                      {region.pixels} samples
+                      {region.pixels}{" "}
+                      {region.pixels === 1 ? "sample" : "samples"}
+                      {region.pixels < 10 ? " · tiny detail" : ""}
                     </option>
                   ))}
                 </select>
@@ -846,6 +886,11 @@ export function FillAnimation({
                 Click a painted area to select it. The blue overlay highlights
                 that region; the pin shows its actual inlet. Small regions are
                 selectable from the list.
+              </p>
+              <p className="region-size-note">
+                Perfectionist corner: regions under 10 analysis samples are
+                often tiny details. Start with the larger shapes; fine-tune the
+                specks only if you can see a difference.
               </p>
               {!!regions.retained?.length && (
                 <p role="status">
