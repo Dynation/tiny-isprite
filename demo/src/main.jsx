@@ -903,6 +903,7 @@ function App({ initialDraft, storageError = "" }) {
               onStateChange={rememberAnimation}
               sourceReady={!!ready}
               onConfigure={openAnimationExport}
+              onShowDownloads={openDownloads}
               active={inspectorTab === "animation"}
               initiallyEnabled={!!current.featured}
               name={current.name}

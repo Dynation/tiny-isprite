@@ -15,6 +15,7 @@ import {
   radialCss,
 } from "./lib/fill-animation.js";
 import { createPortal } from "react-dom";
+import { AnimationTour } from "./AnimationTour.jsx";
 import { RegionOverlay } from "./RegionOrigins.jsx";
 import { download } from "./lib/project.js";
 import {
@@ -45,11 +46,14 @@ export function FillAnimation({
   onStateChange,
   sourceReady = true,
   onConfigure,
+  onShowDownloads,
   name = "icon",
   palettes = { light: {}, dark: {} },
   defaultTheme = "light",
 }) {
   const saved = initialState || {};
+  const [tourStep, setTourStep] = useState(-1);
+  const tourTrigger = useRef(null);
   const [enabled, setEnabled] = useState(saved.enabled ?? initiallyEnabled);
   const [mode, setMode] = useState(saved.mode || "flow");
   const [x, setX] = useState(saved.x ?? 50),
@@ -496,6 +500,88 @@ export function FillAnimation({
       setExporting(false);
     }
   }
+  function closeTour() {
+    setTourStep(-1);
+    if (regions.placing || regions.editing)
+      changeRegions({ placing: false, editing: false });
+    if (tourStep < 7)
+      requestAnimationFrame(() =>
+        tourTrigger.current?.focus({ preventScroll: true }),
+      );
+  }
+  function tourTo(step) {
+    if (step === 3 || step === 4) openRegionEditor(regions.selected);
+    else if (step === 5) changeRegions({ editing: false, placing: true });
+    else if (regions.editing || regions.placing)
+      changeRegions({ editing: false, placing: false });
+    if (step === 7) onShowDownloads?.();
+    setTourStep(step);
+  }
+  useEffect(() => {
+    if (!active && tourStep >= 0) closeTour();
+    else if (tourStep > 0 && !enabled) setTourStep(0);
+    else if (tourStep > 2 && tourStep < 6 && !regionMode) setTourStep(1);
+  }, [active, enabled, regionMode, tourStep]);
+  const tourSteps = [
+    {
+      selector: ".animation-enable",
+      title: "Enable fill animation",
+      body: "Open Fill animation, then turn on Enable fill animation. Ready-made examples already have it on. Flow inside shape follows the artwork; Radial from point spreads outward.",
+      canNext: enabled,
+      hint: !enabled ? "Turn on the checkbox to continue." : undefined,
+    },
+    {
+      selector: ".region-mode-toggle",
+      title: "Edit each region separately",
+      body: "Turn on Separate region origins. Disconnected areas can have their own starting point and timing, even when they share a color.",
+      canNext: regionMode && !!prepared,
+      hint: !regionMode
+        ? "Turn on Separate region origins to continue."
+        : !prepared
+          ? "Preparing the regions…"
+          : undefined,
+    },
+    {
+      selector: ".region-origin-controls > label",
+      title: "Choose a region",
+      body: "Click a painted area on the artwork, or choose it in Selected region. The blue highlight identifies it. For thin lines, zoom with + or Ctrl + wheel; turn Hand off before selecting.",
+      canNext: !!selectedRegion,
+    },
+    {
+      selector: ".region-editor-coordinates",
+      title: "Open the editing popover",
+      body: "Edit region settings opens this popover; double-clicking a region or its pin does too. On phones it appears at the bottom. X and Y move this region’s starting point.",
+      canNext: regions.editing,
+      hint: !regions.editing
+        ? "Reopen Edit region settings to continue."
+        : undefined,
+    },
+    {
+      selector: ".region-editor-timing",
+      title: "Set start, duration and fill",
+      body: "Start is the delay from timeline zero. Duration is how long the fill takes; both use 0.01-second steps. End fill sets how much remains painted. A second region can start before the first finishes.",
+      canNext: regions.editing,
+    },
+    {
+      selector: ".preview-viewport",
+      title: "Place the starting point visually",
+      body: "Click anywhere on the artwork to place the selected region’s origin. Normally, use Place origin on artwork first; a regular click only selects a region. Hand must be off.",
+      canNext: !regions.placing,
+      hint: regions.placing
+        ? "Click the artwork to place the point, then continue."
+        : "Point placed. You can continue.",
+    },
+    {
+      selector: ".animation-playback",
+      title: "Preview the result",
+      body: "Press Play fill, or drag the timeline beneath the artwork to inspect a moment. Colors and Fill animation keep your edits when you switch tabs. Reduced motion keeps playback paused.",
+    },
+    {
+      selector: ".animation-export-action",
+      title: "Take the animation with you",
+      body: "Downloads brings you here. Export animation ZIP includes the prepared animation, HTML example and React integration. Regular SVG and React downloads are static. Open How to use your animation ZIP for setup help.",
+    },
+  ];
   const css = radialCss(x, y, tracks[0].duration);
   return (
     <section className="fill-animation" aria-label="Optional fill animation">
@@ -626,6 +712,33 @@ export function FillAnimation({
           </div>,
           exportHost,
         )}
+      <div className="animation-help-entry">
+        <span>New to animation?</span>
+        <button
+          ref={tourTrigger}
+          type="button"
+          className="palette-copy"
+          onClick={() => {
+            autoPlayPending.current = false;
+            stop();
+            setProgress(100);
+            document
+              .querySelector(
+                '.canvas-tools button[aria-label="Pan preview"][aria-pressed="true"]',
+              )
+              ?.click();
+            setTourStep(0);
+          }}
+        >
+          Show me how
+        </button>
+      </div>
+      <AnimationTour
+        index={tourStep}
+        steps={tourSteps}
+        onStep={tourTo}
+        onClose={closeTour}
+      />
       <label className="animation-enable">
         <input
           id="enable-fill-animation"

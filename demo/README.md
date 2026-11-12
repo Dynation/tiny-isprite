@@ -236,6 +236,37 @@ scoped wheel zoom, Fit, mobile controls and byte-identical static SVG downloads.
 collapse/reset, expanded-view recovery, ZIP download from Colors, and mobile
 preview/timeline visibility at 390px and 320px. It is part of test:playground.
 
+### Guided animation editing
+
+Open Fill animation and choose **Show me how** above Enable fill animation.
+The eight-step walkthrough highlights the actual control, points to it from a
+popover, and offers Back, Next, Skip tour and Escape. It can be restarted at any
+time and does not replace the current artwork or load a different example.
+Controls and the canvas remain interactive throughout. Go to control moves
+keyboard focus to the highlighted input or button.
+
+1. Enable fill animation (already enabled on featured examples).
+2. Enable Separate region origins; wait for the region map to be ready.
+3. Click a painted region or choose Selected region. Zoom helps with thin lines;
+   Hand must be off when selecting or placing points.
+4. Edit region settings opens X/Y controls. Double-click is an alternative. On
+   phones the same editing form uses a bottom sheet.
+5. Start is the delay from timeline zero, Duration is the fill time, and End fill
+   is the final percentage. Start/Duration use 0.01-second steps; regions may overlap.
+6. Place origin on artwork enables point placement; the next artwork click moves
+   this region's inlet. An ordinary click only selects a region.
+7. Play fill or scrub the timeline beneath the artwork.
+8. Downloads → Export animation ZIP. The separate SVG/React downloads stay static;
+   How to use your animation ZIP contains the integration guide.
+
+The tour opens the editing popover and arms point placement at the relevant step;
+Next waits for required setup/placement. Back keeps edits. Done, Skip tour and
+Escape remove highlights and cancel unfinished placement. Export remains an
+explicit button click. Tour state is transient and is not saved into local drafts.
+`test/animation-tour.mjs` verifies the complete live editing/export flow at desktop,
+390px and 320px widths, including changed regional timing, point placement,
+Back/Next and Done/Skip/Escape recovery.
+
 ### First visit and page theme
 
 The playground starts with the original multicolor Orbit artwork in Single icon

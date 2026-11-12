@@ -2868,3 +2868,124 @@ html[data-page-theme="dark"] .canvas-zoom-help {
     padding: 4px 7px;
   }
 }
+
+.animation-help-entry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  font-size: 12px;
+}
+.animation-help-entry .palette-copy {
+  margin: 0;
+}
+.animation-tour {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 200;
+}
+.animation-tour-highlight {
+  position: fixed;
+  border: 3px solid #ffb64d;
+  border-radius: 8px;
+  box-shadow:
+    0 0 0 2px #1b2538,
+    0 0 0 5px #ffb64d44;
+}
+.animation-tour-popover {
+  position: fixed;
+  pointer-events: auto;
+  width: min(320px, calc(100vw - 16px));
+  max-height: calc(100dvh - 16px);
+  overflow: auto;
+  padding: 16px;
+  background: #fff;
+  color: #253047;
+  border: 1px solid #c4cfdf;
+  border-radius: 12px;
+  box-shadow: 0 12px 48px #0005;
+  font:
+    13px/1.55 Inter,
+    system-ui,
+    sans-serif;
+}
+.animation-tour-popover header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  color: #5b6780;
+}
+.animation-tour-popover header button {
+  font-size: 24px;
+  line-height: 1;
+  padding: 0 4px;
+}
+.animation-tour-popover h3 {
+  font-size: 16px;
+  margin: 8px 0;
+}
+.animation-tour-popover p {
+  margin: 8px 0;
+}
+.animation-tour-popover .tour-hint {
+  font-weight: 600;
+}
+.animation-tour-popover .tour-focus {
+  font-size: 11px;
+  text-decoration: underline;
+  padding: 4px 0;
+}
+.animation-tour-popover footer {
+  padding: 0;
+  flex-wrap: nowrap;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+.animation-tour-popover footer button {
+  padding: 7px 10px;
+  border: 1px solid #c4cfdf;
+  border-radius: 5px;
+  font-size: 12px;
+}
+.animation-tour-popover footer button:first-child {
+  margin-right: auto;
+}
+.animation-tour-popover .tour-next {
+  background: #245cf3;
+  color: #fff;
+  border-color: #245cf3;
+}
+html[data-page-theme="dark"] .animation-tour-popover {
+  background: #222d3e;
+  color: #e5e9f2;
+  border-color: #4a5b76;
+}
+html[data-page-theme="dark"] .animation-tour-popover header {
+  color: #b2c3dd;
+}
+@media (max-width: 720px) {
+  .animation-tour-popover {
+    font-size: 12px;
+    padding: 12px;
+  }
+  .animation-tour-popover h3 {
+    font-size: 14px;
+  }
+}
+
+.animation-tour-pointer {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}

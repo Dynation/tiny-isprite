@@ -69,6 +69,7 @@ export function RegionEditor({
   useEffect(() => {
     const outside = (event) => {
       if (
+        !event.target.closest?.("[data-animation-tour]") &&
         !popup.current?.contains(event.target) &&
         !anchorRef.current?.contains(event.target)
       )
