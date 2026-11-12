@@ -15,6 +15,7 @@ import {
   radialCss,
 } from "./lib/fill-animation.js";
 import { createPortal } from "react-dom";
+import { createPreviewMask } from "./lib/preview-mask.js";
 import { AnimationTour } from "./AnimationTour.jsx";
 import { RegionOverlay } from "./RegionOrigins.jsx";
 import { download } from "./lib/project.js";
@@ -55,6 +56,7 @@ export function FillAnimation({
   const [tourStep, setTourStep] = useState(-1);
   const [tourAdvanced, setTourAdvanced] = useState(false);
   const tourTrigger = useRef(null);
+  const previewMask = useRef(null);
   const [enabled, setEnabled] = useState(saved.enabled ?? initiallyEnabled);
   const [mode, setMode] = useState(saved.mode || "flow");
   const [x, setX] = useState(saved.x ?? 50),
@@ -272,6 +274,8 @@ export function FillAnimation({
     setPlaying(false);
   }
   function clearMask() {
+    previewMask.current?.destroy();
+    previewMask.current = null;
     const target = targetRef.current?.querySelector("svg");
     if (target) {
       target.style.removeProperty("mask-image");
@@ -351,23 +355,23 @@ export function FillAnimation({
       x,
       y,
     );
-    target.style.maskImage = result.complete ? "none" : `url("${result.url}")`;
-    target.style.webkitMaskImage = result.complete
-      ? "none"
-      : `url("${result.url}")`;
-    const preserve =
-      target.getAttribute("preserveAspectRatio") || "xMidYMid meet";
-    const align =
-      preserve.split(/\s+/).find((value) => /^x(Min|Mid|Max)Y/.test(value)) ||
-      "xMidYMid";
-    target.style.maskSize =
-      regionMode && !preserve.includes("none")
-        ? preserve.includes("slice")
-          ? "cover"
-          : "contain"
-        : "100% 100%";
-    target.style.maskPosition = `${align.startsWith("xMin") ? "left" : align.startsWith("xMax") ? "right" : "center"} ${align.endsWith("YMin") ? "top" : align.endsWith("YMax") ? "bottom" : "center"}`;
-    target.style.maskRepeat = "no-repeat";
+    const current = previewMask.current;
+    if (
+      !current ||
+      current.svg !== target ||
+      current.width !== prepared.width ||
+      current.height !== prepared.height ||
+      current.separateRegions !== regionMode
+    ) {
+      current?.destroy();
+      previewMask.current = createPreviewMask(
+        target,
+        prepared.width,
+        prepared.height,
+        regionMode,
+      );
+    }
+    previewMask.current.update(result.url, result.complete);
     target.style.cursor = "crosshair";
     setStats({ revealed: result.revealed, painted: result.painted });
   }, [enabled, playback, progress, mode, signature, active, regionMode, total]);

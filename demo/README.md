@@ -2,14 +2,15 @@
 
 A static React/Vite app for exploring tiny-isprite and exporting sprites in the
 browser. No upload endpoint, account, analytics or persistent storage is required.
-Refreshing resets the sample set.
+Local drafts restore your edits when browser storage is available.
 
 ## Run
 
 Node 20+: `npm ci`, then `npm run dev`. Production: `npm run build` and
 `npm run preview`. `npm test` checks hashing, bundle contents and validation.
 From the parent library, `npm run test:playground` runs production browser checks
-and reproduces ZIP output with the published generator.
+and reproduces ZIP output with the published generator. Install its browsers with
+`npx playwright install chromium firefox` from the parent library.
 
 ## Shared generation
 
@@ -236,6 +237,27 @@ scoped wheel zoom, Fit, mobile controls and byte-identical static SVG downloads.
 collapse/reset, expanded-view recovery, ZIP download from Colors, and mobile
 preview/timeline visibility at 390px and 320px. It is part of test:playground.
 
+### Firefox preview rendering
+
+The live preview uses a stable native SVG mask, matching the working ZIP player's
+rendering approach. Updating CSS mask-image to a new PNG URL on every frame caused
+intermittent completely blank frames in Firefox. The preview now updates the image
+inside one SVG mask while keeping its reference stable. No user-agent detection is
+needed, and the portable player and exported animation format are unchanged.
+
+The temporary mask wraps only the displayed artwork. ViewBox, preserveAspectRatio,
+letterboxing and the canonical region grid determine mask coordinates. Colors,
+disabling animation and regeneration remove the wrapper/defs and restore the
+original displayed nodes. Exports continue to use the generated SVG source, so
+preview mask nodes never enter downloaded artwork.
+
+`npm run test:firefox-animation` performs more than 200 mask updates in Firefox and
+Chromium and counts visible red pixels in captured frames to detect blanking or
+large backward jumps. It checks the unchanged portable player alongside preview,
+plus actual editor mask reuse and cleanup. Frame statistics are saved under
+`.release-artifacts/firefox-animation/`. The test is also part of test:playground;
+CI installs both browsers.
+
 ### Guided animation editing
 
 Open Fill animation and choose **Show me how** above Enable fill animation.
@@ -356,7 +378,7 @@ the map format or breaking existing schema-v1 players. CSS-only radial export
 still represents the whole-icon shortcut.
 
 This mode uses a fixed artwork-aspect analysis grid, with an aligned SVG overlay
-and contain/cover mask placement to account for viewport letterboxing. Region
+and native SVG mask coordinates to account for viewport letterboxing. Region
 identities and coordinates survive viewport/export-size changes and palette edits.
 Changes to geometry or paint grouping can temporarily leave overrides unapplied; their previous configurations are retained. Regions are connected
 samples on the existing 320px analysis grid, not semantic SVG path objects:

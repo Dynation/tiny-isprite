@@ -925,8 +925,10 @@ try {
     "empty flow",
   );
   assert.match(
-    await targetSvg.evaluate((el) => el.style.maskImage),
-    /data:image\/png/,
+    await targetSvg
+      .locator(":scope > [data-preview-content]")
+      .getAttribute("mask"),
+    /url\(#isprite-preview-/,
   );
   await page
     .locator(".icon-inspector")
@@ -1034,8 +1036,10 @@ try {
     .fill("55");
   await animationProgress.fill("100");
   assert.match(
-    await targetSvg.evaluate((el) => el.style.maskImage),
-    /data:image\/png/,
+    await targetSvg
+      .locator(":scope > [data-preview-content]")
+      .getAttribute("mask"),
+    /url\(#isprite-preview-/,
   );
   await page
     .getByRole("combobox", { name: "Fill effect", exact: true })
@@ -1064,7 +1068,9 @@ try {
   assert.equal(await animationProgress.inputValue(), "100");
   await poll(
     async () =>
-      (await targetSvg.evaluate((el) => el.style.maskImage)) === "none",
+      (await targetSvg
+        .locator(":scope > [data-preview-content]")
+        .getAttribute("mask")) === null,
     "reduced motion complete vector",
   );
   await page.emulateMedia({ reducedMotion: "no-preference" });
