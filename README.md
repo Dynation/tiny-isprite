@@ -398,6 +398,10 @@ first: the packaging hook builds the library but does not run browser tests.
 
 See [CHANGELOG.md](CHANGELOG.md) for release details.
 
+## Support
+
+If tiny-isprite saves you time, you can [buy Dynation a coffee on Ko-fi](https://ko-fi.com/dynation).
+
 ## License
 
 [MIT](LICENSE.md) · [Dina / Dynation](https://github.com/Dynation)
