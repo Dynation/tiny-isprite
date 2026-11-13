@@ -20,8 +20,7 @@ The npm package stays focused on the sprite generator and React `Icon` component
 The browser editor and exported animation player are separate; installing
 `tiny-isprite` does not add an animation runtime to your app.
 
-The published npm release is **2.1.0**. This branch prepares **2.2.0**; its new
-browser API is marked below and is not yet available from npm. For existing
+This README documents **2.2.0**, including the browser generation API. For existing
 projects, see [Upgrading from 2.0.x](#upgrading-from-20x).
 
 ## Quick start
@@ -307,7 +306,7 @@ The return type is `{ url, hash, prefix, cssUrl? }`. Generator options and retur
 values have TypeScript declarations. Unlike the CLI, the Node API defaults its
 source folder to `./public/icons`; specify `srcDir` to make the choice explicit.
 
-## Browser generation API (2.2.0, unreleased)
+## Browser generation API
 
 Use `tiny-isprite/browser` to generate sprite and CSS strings without Node.js
 filesystem imports, manifests or a DOM. This entry uses the same engine as the CLI.

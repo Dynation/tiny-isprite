@@ -1,6 +1,6 @@
 # Changelog
 
-## [2.2.0] - Unreleased
+## [2.2.0] - 2026-11-12
 
 - Add the typed `tiny-isprite/browser` entry point for in-memory SVG/CSS generation without Node filesystem or DOM dependencies.
 - Share the canonical generation engine between the CLI and browser API, with byte-for-byte color-mode parity coverage. Existing React Icon and CLI APIs remain compatible.
