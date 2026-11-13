@@ -3,7 +3,7 @@
 [![npm version](https://img.shields.io/npm/v/tiny-isprite)](https://www.npmjs.com/package/tiny-isprite)
 [![license](https://img.shields.io/npm/l/tiny-isprite)](LICENSE.md)
 
-**[Live demo & icon animation builder](https://dynation.github.io/tiny-isprite/)**
+**[Live demo & icon animation builder](https://tiny-isprite.com/)**
 
 Generate an SVG sprite from a folder of icons, then render its symbols with React.
 Content-hashed filenames give regenerated sprites a new URL, so browsers can cache
@@ -14,21 +14,22 @@ assets without keeping an old icon after a rebuild.
 - `currentColor`, preserved fills and generated CSS variables.
 - Runnable Vite and Next.js examples, with browser tests for production rebuilds.
 - A [browser playground](#online-editor) for sprites and standalone icons, plus
-  a separate [icon animation builder](#icon-animation-builder) with portable exports.
+  an optional icon animation builder with portable exports.
 
 The npm package stays focused on the sprite generator and React `Icon` component.
 The browser editor and exported animation player are separate; installing
 `tiny-isprite` does not add an animation runtime to your app.
 
-This README documents the **2.2** release line. For existing projects, see
-[Upgrading from 2.0.x](#upgrading-from-20x).
+The published npm release is **2.1.0**. This branch prepares **2.2.0**; its new
+browser API is marked below and is not yet available from npm. For existing
+projects, see [Upgrading from 2.0.x](#upgrading-from-20x).
 
 ## Quick start
 
 The CLI requires **Node.js 18+**.
 
 ```bash
-npm install tiny-isprite@^2.2.0
+npm install tiny-isprite
 ```
 
 Put SVG files in `icons/`. Each filename becomes a symbol name: `star.svg` becomes
@@ -306,7 +307,7 @@ The return type is `{ url, hash, prefix, cssUrl? }`. Generator options and retur
 values have TypeScript declarations. Unlike the CLI, the Node API defaults its
 source folder to `./public/icons`; specify `srcDir` to make the choice explicit.
 
-## Browser generation API
+## Browser generation API (2.2.0, unreleased)
 
 Use `tiny-isprite/browser` to generate sprite and CSS strings without Node.js
 filesystem imports, manifests or a DOM. This entry uses the same engine as the CLI.
@@ -330,7 +331,7 @@ untrusted SVG. TypeScript declarations are included.
 
 ## Online editor
 
-**[Open tiny-isprite Lab](https://dynation.github.io/tiny-isprite/)** to recolor SVGs,
+**[Open tiny-isprite Lab](https://tiny-isprite.com/)** to recolor SVGs,
 create sprites or standalone React/SVG icons, and export optional fill animations.
 No install or account is needed; uploaded artwork stays in the browser.
 
