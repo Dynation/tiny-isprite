@@ -5,15 +5,15 @@ import net from 'node:net';
 export function run(command, args, options = {}) {
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, { ...options, stdio: ['ignore', 'pipe', 'pipe'] });
-    let output = '';
-    child.stdout.on('data', data => { output += data; });
+    let output = '', stdout = '';
+    child.stdout.on('data', data => { output += data; stdout += data; });
     child.stderr.on('data', data => { output += data; });
     const timeout = setTimeout(() => child.kill('SIGKILL'), 180_000);
     child.once('error', error => { clearTimeout(timeout); reject(error); });
     child.once('exit', (code, signal) => {
       clearTimeout(timeout);
       if (code !== 0) reject(new Error(`${command} ${args.join(' ')} failed (${code ?? signal})\n${output}`));
-      else resolve(output);
+      else resolve(stdout);
     });
   });
 }

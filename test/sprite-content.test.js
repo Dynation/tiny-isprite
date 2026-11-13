@@ -48,15 +48,3 @@ test("browser generation mirrors CLI bytes, CSS, ordering and hashes for every e
       );
   }
 });
-
-test("standalone playground mirror is an exact generated copy of the shared engine", async () => {
-  const canonical = await readFile(
-    new URL("../core/sprite-content.js", import.meta.url),
-    "utf8",
-  );
-  const mirror = await readFile(
-    new URL("../demo/src/lib/sprite-content.js", import.meta.url),
-    "utf8",
-  );
-  assert.equal(mirror.split("\n").slice(1).join("\n"), canonical);
-});

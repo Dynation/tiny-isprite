@@ -33,6 +33,7 @@ import React from 'react';
 const { renderToString } = createRequire(import.meta.url)('react-dom/server');
 import Icon, { Icon as Named } from 'tiny-isprite';
 import { generateSprite } from 'tiny-isprite/generator';
+import { buildSpriteContent } from 'tiny-isprite/browser';
 const cjs = createRequire(import.meta.url)('tiny-isprite');
 assert.equal(Icon, Named);
 for (const component of [Icon, cjs.Icon, cjs.default]) {
@@ -41,6 +42,9 @@ for (const component of [Icon, cjs.Icon, cjs.default]) {
   }));
   assert.match(html, /href="\\/demo\\/sprite.hash.svg\\?theme=dark&amp;v=0#custom-star"/);
 }
+const memory = await buildSpriteContent({ icons: [{ name: 'memory.svg', content: '<svg viewBox="0 0 24 24"><path fill="red" d="M0 0h2v2z"/></svg>' }], prefix: 'web-' });
+assert.ok(memory.sprite.includes('id="web-memory"'));
+assert.ok(memory.sprite.includes('fill="currentColor"'));
 const result = await generateSprite({ srcDir: './icons', outputFile: './public/sprite.svg' });
 assert.match(result.url, /^\\/sprite\\.[a-f0-9]{20}\\.svg$/);
 console.log('PASS Node ' + process.versions.node + ' / React ' + React.version + ': ESM, CJS, SSR, generator');
@@ -50,10 +54,14 @@ console.log('PASS Node ' + process.versions.node + ' / React ' + React.version +
     await writeFile(path.join(cwd, 'consumer.mts'), `
 import Icon, { type IconProps } from 'tiny-isprite';
 import { generateSprite, type SpriteManifest } from 'tiny-isprite/generator';
+import { buildSpriteContent, type SpriteContent, type BuildSpriteContentOptions } from 'tiny-isprite/browser';
 const props: IconProps = { name: 'star', spriteUrl: '/sprite.hash.svg', prefix: 'custom-', version: 0 };
 Icon(props);
 const sprite: SpriteManifest = await generateSprite({});
 void sprite.url;
+const options: BuildSpriteContentOptions = { icons: [], useCssVars: true };
+const memory: SpriteContent = await buildSpriteContent(options);
+void memory.css;
 `);
     await writeFile(path.join(cwd, 'consumer.cts'), `import Icons = require('tiny-isprite');\nIcons.Icon({ name: 'star', spriteUrl: '/sprite.hash.svg' });\n`);
     for (const node of nodes) {

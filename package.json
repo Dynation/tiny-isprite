@@ -19,6 +19,10 @@
     "./generator": {
       "types": "./core/generate-sprite.d.ts",
       "import": "./core/generate-sprite.js"
+    },
+    "./browser": {
+      "types": "./core/browser.d.ts",
+      "import": "./core/browser.js"
     }
   },
   "sideEffects": false,
@@ -42,11 +46,7 @@
     "test:compat": "npm run build && node test/compatibility.mjs",
     "test:production": "node test/production.mjs",
     "check:release": "npm run typecheck && npm test && npm run test:compat && npm run test:browser && npm run test:production && npm audit",
-    "dev:demo": "npm run dev --prefix demo",
-    "build:demo": "npm run build --prefix demo",
-    "test:playground": "npm run build:demo && npm test --prefix demo && node test/playground.mjs && node test/animation-export.mjs && node test/region-origins.mjs && node test/draft-persistence.mjs && node test/editor-layout.mjs && node test/preview-zoom.mjs && node test/preview-themes.mjs && node test/current-color-controls.mjs && node test/demo-presets.mjs && node test/animation-tour.mjs && node test/firefox-animation.mjs",
-    "test:animation-export": "npm run build:demo && node test/animation-export.mjs",
-    "test:firefox-animation": "npm run build:demo && node test/firefox-animation.mjs"
+    "prepare": "npm run build 1>&2"
   },
   "keywords": [
     "svg",
