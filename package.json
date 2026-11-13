@@ -34,7 +34,8 @@
     "bin",
     "core",
     "LICENSE.md",
-    "README.md"
+    "README.md",
+    "CHANGELOG.md"
   ],
   "scripts": {
     "build": "tsup src/Icon.tsx --format esm,cjs --dts --external react --clean",
@@ -86,5 +87,9 @@
   "bugs": {
     "url": "https://github.com/Dynation/tiny-isprite/issues"
   },
-  "homepage": "https://dynation.github.io/tiny-isprite/"
+  "homepage": "https://tiny-isprite.com/",
+  "funding": {
+    "type": "individual",
+    "url": "https://ko-fi.com/dynation"
+  }
 }
