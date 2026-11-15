@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+
+- Parse SVG XML and static CSS instead of deleting the root tag. Preserve root
+  rendering properties, normalize comma-separated viewBoxes, namespace internal
+  IDs and update local href/paint/ARIA references.
+- Materialize supported static CSS with its cascade before changing the tree.
+  Preserve SVG text whitespace and reject unsupported input with its filename.
+- Add `target` validation: CLI/Node default to portable `external`; complex
+  paint-server artwork uses `inline`. The browser API defaults to `inline`.
+- Add pixel regression coverage in Chromium, Firefox and WebKit and generation
+  dependencies for XML/CSS parsing and selector matching. The React runtime
+  component is unchanged. This unreleased change has not been published.
+
+
 ## [2.2.0] - 2026-11-12
 
 - Add the typed `tiny-isprite/browser` entry point for in-memory SVG/CSS generation without Node filesystem or DOM dependencies.

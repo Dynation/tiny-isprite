@@ -186,16 +186,76 @@ build-sprite [srcDir] [outputFile] [options]
 | `-p, --preserve-colored` | Off | Keep original monochrome fills instead of converting them to `currentColor`. |
 | `-c, --use-css-vars` | Off | Convert explicit fills/strokes to variables for icons classified as monochrome. |
 | `-a, --all` | Off | Convert explicit fills/strokes to variables for all icons. |
-| `-m, --minify` | Off | Collapse whitespace in the generated SVG. |
+| `-m, --minify` | Off | Compact wrapper formatting without collapsing SVG text. |
+| `--target <target>` | `external` | Validate portable external use, or generate `inline` artwork. |
 
 Icons with multiple explicit fill colors are preserved by default. `none`,
 `currentColor` and paint-server references such as `url(...)` are left unchanged
-by CSS-variable conversion. Supply a four-value `viewBox`; otherwise the generator
-falls back to `0 0 24 24`.
+by CSS-variable conversion. Supply a valid four-number `viewBox`. Commas are accepted; invalid values reject.
+A missing viewBox falls back to `0 0 24 24`.
 
 One-shot generation errors exit with status 1. Watch mode logs rebuild errors and
 retries on the next SVG edit. An empty source folder publishes an empty sprite so
 removed icons do not remain in the current output.
+
+## SVG preservation and rendering targets
+
+The generator parses XML and keeps the original SVG viewport inside each symbol.
+Root paint, opacity, style and `preserveAspectRatio` survive conversion; root
+attribute transforms move to the surrounding group so their viewport units also
+work in WebKit. Comma-separated `viewBox` values are normalized. Malformed or
+nonpositive viewBoxes reject with the source filename; a missing viewBox retains
+the legacy `0 0 24 24` fallback.
+
+Every internal ID and its local href, paint URL and ARIA references are renamed
+per icon. Duplicate IDs within an input, duplicate symbol names and generated-ID
+collisions reject instead of producing ambiguous references. Self-contained
+static CSS is matched against the original SVG tree and materialized as inline
+longhand declarations, preserving specificity, source order and `!important`.
+This includes selectors such as `svg > path`, classes, escaped IDs, attribute
+selectors and supported structural pseudo-classes. Empty style placeholders keep
+structural element positions. CSS is resolved before IDs are renamed.
+
+There are two validation targets:
+
+- **`external`** is the CLI and filesystem-generator default. It rejects paint
+  URL references (gradients, masks, clip paths, filters) because external `<use>`
+  does not render those consistently across the tested Chromium and WebKit
+  engines. Use it for the portable external icon subset and serve the hashed
+  manifest URL from the same origin.
+- **`inline`** is the in-memory browser API default. It preserves those references
+  for a sprite injected into the page. Choose `--target inline` or `target:
+  'inline'` explicitly in the CLI/Node API for this output. Inject the generated
+  SVG once, load its generated CSS if needed, and use `<Icon name="..." />`
+  without external mode. A sprite can be split into an external set of simple
+  controls and a separate inline set of complex artwork. Give these sets distinct
+  symbol prefixes (for example `external-` and `inline-`).
+
+```bash
+build-sprite ./icons ./public/sprite.svg --target external
+build-sprite ./artwork ./generated/artwork.svg --target inline
+```
+
+```js
+const { sprite, css } = await buildSpriteContent({
+  icons, target: 'inline', preserveColored: true,
+});
+```
+
+Dynamic/complex selectors (including hover and relational selectors), CSS
+at-rules, CSS shorthands, root CSS viewport sizing/transforms, SMIL, scripts and
+foreignObject currently reject with a file-specific error. Keep such artwork as
+its original standalone/inline SVG until its semantics have explicit support;
+do not silently discard its properties. CSS longhands for paint, color, opacity
+and typography remain supported. Context-dependent rules that rely on an HTML
+ancestor or stylesheets outside the input SVG are outside this self-contained
+static CSS contract. This is a compatibility converter, not an SVG sanitizer.
+
+`--minify` changes wrapper formatting only; it does not collapse significant text
+or CSS whitespace. Output bytes and hashes change after this converter update,
+so deploy the new assets with their matching manifest and retain earlier assets.
+The parser/selector dependencies belong to generation; the React Icon entry
+continues to import only React.
 
 ## Colors
 
@@ -309,7 +369,7 @@ source folder to `./public/icons`; specify `srcDir` to make the choice explicit.
 ## Browser generation API
 
 Use `tiny-isprite/browser` to generate sprite and CSS strings without Node.js
-filesystem imports, manifests or a DOM. This entry uses the same engine as the CLI.
+filesystem imports, manifests or a host DOM; the XML parser is bundled. This entry uses the same engine as the CLI.
 
 ```js
 import { buildSpriteContent } from 'tiny-isprite/browser';
@@ -323,7 +383,7 @@ const { sprite, css } = await buildSpriteContent({
 ```
 
 `icons` is an array of `{ name, content }`. Supported flags are `preserveColored`,
-`useCssVars`, `forceAllVars`, `minify` and `prefix`, with the same color semantics as
+`useCssVars`, `forceAllVars`, `minify`, `prefix` and `target`, with the same color semantics as
 the CLI. The result contains `sprite` and optional `css` strings. The caller owns
 input sanitization, hashing, filenames and delivery; this API does not sanitize
 untrusted SVG. TypeScript declarations are included.
@@ -367,9 +427,13 @@ Use Node 22+ for the full release suite:
 
 ```bash
 npm ci
-npx playwright install chromium
+npx playwright install chromium firefox webkit
 npm run check:release
 ```
+
+The Node test files run serially: parallel packed-consumer checks triggered a
+Node 22 child-runner result-deserialization error in the local environment.
+The same assertions pass in serial execution.
 
 Individual checks:
 
@@ -378,13 +442,14 @@ Individual checks:
 | `npm run typecheck` | Library source types. |
 | `npm test` | Generator, React/API, typed manifests, packed package and stale `dist` regression tests. |
 | `npm run test:compat` | Packed package with React 17/18/19 on the current Node; ESM, CommonJS, SSR, CLI and TypeScript. |
+| `npm run test:svg` | Source-versus-sprite pixels in Chromium/Firefox/WebKit, inline complex artwork, portable external controls and CSS-variable updates. |
 | `npm run test:browser` | Vite Fast Refresh with React state retention and an immutable-cache regression. |
 | `npm run test:production` | Packed consumers, two Vite/Next.js production builds, visible SVG updates with warm cache, retained assets, Next.js SSR/hydration, and consumer audits. |
 | `npm audit` | The repository dependency tree. |
 
 [GitHub Actions](.github/workflows/ci.yml) defines the Node 18/20/22/24 compatibility
-matrix and production browser checks. The same 12 Node/React combinations have been
-checked locally. These are local production-server tests, not proof of a live CDN,
+matrix and production browser checks. The current changes are checked locally on Node 22; the remaining Node versions
+are defined by CI and require their own run. These are local production-server tests, not proof of a live CDN,
 Vercel deployment or physical-device coverage.
 
 Screenshots, production logs, compatibility results and the packed archive go into

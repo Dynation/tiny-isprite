@@ -107,7 +107,7 @@ test('packed npm artifact contains working ESM/CJS/types/CLI/generator entry poi
   execFileSync('tar', ['-xf', path.join(root, filename), '-C', root]);
   const { rename, symlink } = await import('node:fs/promises');
   await rename(path.join(root, 'package'), path.join(modules, 'tiny-isprite'));
-  for (const dependency of ['react', 'commander', '@types']) {
+  for (const dependency of ['react', 'commander', '@types', '@xmldom', 'css-tree', 'css-select']) {
     await symlink(path.join(repo, 'node_modules', dependency), path.join(modules, dependency), 'dir');
   }
   const esm = execFileSync(process.execPath, ['--input-type=module', '-e', "import Icon, { Icon as Named } from 'tiny-isprite'; import { generateSprite } from 'tiny-isprite/generator'; if (Icon !== Named || typeof generateSprite !== 'function') process.exit(1);"], { cwd: root });
@@ -129,4 +129,16 @@ test('generated JS and MJS manifests resolve with strict TypeScript checking', a
     await writeFile(path.join(root, 'consumer.mts'), `import sprite from './src/sprite.${extension}';\nconst url: string = sprite.url;\nconst css: string | undefined = sprite.cssUrl;\nvoid [url, css];\n`);
     execFileSync(process.execPath, [path.resolve('node_modules/typescript/bin/tsc'), '--noEmit', '--strict', '--skipLibCheck', '--module', 'NodeNext', '--moduleResolution', 'NodeNext', path.join(root, 'consumer.mts')]);
   }
+});
+
+test('failed external compatibility validation leaves the previous published manifest and aliases intact', async t => {
+  const { options } = await fixture(t);
+  await generateSprite(options);
+  const manifest = await readFile(options.manifestFile, 'utf8');
+  const alias = await readFile(options.outputFile, 'utf8');
+  await writeFile(path.join(options.srcDir,'star.svg'), '<svg><defs><clipPath id="crop"><circle r="10"/></clipPath></defs><path clip-path="url(#crop)"/></svg>');
+  await assert.rejects(generateSprite(options), /star.svg.*inline sprite/);
+  assert.equal(await readFile(options.manifestFile, 'utf8'),manifest);
+  assert.equal(await readFile(options.outputFile, 'utf8'),alias);
+  await generateSprite({...options,target:'inline'});
 });

@@ -11,6 +11,8 @@ export interface BuildSpriteContentOptions {
   forceAllVars?: boolean;
   minify?: boolean;
   prefix?: string;
+  /** Defaults to inline; external rejects nonportable paint-server URLs. */
+  target?: 'inline' | 'external';
 }
 export interface SpriteContent {
   sprite: string;
