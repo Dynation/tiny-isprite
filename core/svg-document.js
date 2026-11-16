@@ -84,6 +84,38 @@ export function prepareSvg(root, symbolId, { target = "inline" } = {}) {
     }
   }
   flattenStyles(root);
+  const box = viewBox(root);
+  let viewport;
+  if (root.hasAttribute("style")) {
+    const styles = css(root.getAttribute("style"), "declarationList");
+    const layout = new Map();
+    let display, layoutImportant = false;
+    styles.children.forEach((decl) => {
+      if (decl.property === "display") display = generate(decl.value);
+      if (["height", "max-width", "display"].includes(decl.property) && decl.important) layoutImportant = true;
+      if (["height", "max-width"].includes(decl.property)) layout.set(decl.property, generate(decl.value));
+    });
+    if (layout.size) {
+      const dimension = (name) => {
+        const text = root.getAttribute(name) || "";
+        return /^(?:\d+(?:\.\d*)?|\.\d+)(?:px)?$/.test(text) ? parseFloat(text) : NaN;
+      };
+      const width = dimension("width"), height = dimension("height");
+      const bounds = box.split(" ").map(Number);
+      if (layout.get("height") !== "auto" || layout.get("max-width") !== "100%" || display !== "block" || layoutImportant ||
+        !Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0 ||
+        Math.abs(width / height - bounds[2] / bounds[3]) > 1e-9 ||
+        ["transform", "x", "y"].some((name) => root.hasAttribute(name)))
+        throw new Error("Unsupported root CSS viewport; expected height:auto, max-width:100% and finite dimensions matching viewBox");
+      if (target === "external") throw new Error("Responsive root CSS requires an inline viewport; generate an inline sprite");
+      viewport = { width, height };
+      styles.children.forEach((decl, item) => {
+        if (["height", "max-width"].includes(decl.property)) styles.children.remove(item);
+      });
+      const value = generate(styles);
+      if (value) root.setAttribute("style", value); else root.removeAttribute("style");
+    }
+  }
   const scopeId = `scope--${encoded(symbolId)}`;
   const rootId = root.hasAttribute("id")
     ? ids.get(root.getAttribute("id"))
@@ -129,7 +161,6 @@ export function prepareSvg(root, symbolId, { target = "inline" } = {}) {
   }
 
   root.setAttribute("id", rootId);
-  const box = viewBox(root);
   root.setAttribute("viewBox", box);
   // The retained SVG owns the viewport and preserves inherited paint;
   // inherited paint and transforms; source pixel dimensions must not clip it.
@@ -138,6 +169,9 @@ export function prepareSvg(root, symbolId, { target = "inline" } = {}) {
   const doc = root.ownerDocument;
   const symbol = doc.createElementNS(SVG, "symbol");
   symbol.setAttribute("id", symbolId);
+  // The consuming inline adapter applies layout to its outer visible SVG;
+  // the retained inner SVG continues to own the source coordinate system.
+  if (viewport) symbol.setAttribute("data-isprite-viewport", JSON.stringify(viewport));
   // Keep viewport mapping on the retained root: root transforms use the
   // instance viewport, not coordinates scaled a second time by the symbol.
 

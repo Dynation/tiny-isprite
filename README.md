@@ -234,7 +234,7 @@ collisions reject instead of producing ambiguous references. Self-contained
 static CSS is matched against the original SVG tree and materialized as inline
 longhand declarations, preserving specificity, source order and `!important`.
 This includes selectors such as `svg > path`, classes, escaped IDs, attribute
-selectors and supported structural pseudo-classes. Empty style placeholders keep
+selectors, static `:where()`, `:is()`, `:not()` and supported structural pseudo-classes. Empty style placeholders keep
 structural element positions. CSS is resolved before IDs are renamed.
 
 There are two validation targets:
@@ -263,8 +263,21 @@ const { sprite, css } = await buildSpriteContent({
 });
 ```
 
-Dynamic/complex selectors (including hover and relational selectors), CSS
-at-rules, CSS shorthands, root CSS viewport sizing/transforms, SMIL, scripts and
+Responsive Plot-style roots (`display:block; height:auto; max-width:100%`) with
+finite pixel width/height matching their viewBox aspect ratio are supported in
+inline output. Plot's `height:intrinsic` fallback after `height:auto` is normalized
+for this verified geometry. Other root viewport rules remain explicit errors.
+Root transforms/x/y and important layout declarations are not combined with this
+layout path. The symbol carries `data-isprite-viewport` JSON with its natural
+width/height. An inline adapter applies that layout to the outer visible SVG,
+with a normalized viewBox, proportional automatic height and parent-width cap;
+the inner SVG retains the source coordinates. The editor's generated InlineIcon
+and standalone exports handle this automatically. Raw symbol consumers must apply
+the viewport metadata themselves; the basic square Icon does not infer it. These
+roots reject external output with an instruction to generate an inline sprite.
+
+Dynamic selectors (including hover and relational `:has()`), CSS
+at-rules, CSS shorthands, unsupported root CSS viewport sizing/transforms, SMIL, scripts and
 foreignObject currently reject with a file-specific error. Keep such artwork as
 its original standalone/inline SVG until its semantics have explicit support;
 do not silently discard its properties. CSS longhands for paint, color, opacity

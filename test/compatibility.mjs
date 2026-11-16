@@ -43,6 +43,8 @@ for (const component of [Icon, cjs.Icon, cjs.default]) {
   assert.match(html, /href="\\/demo\\/sprite.hash.svg\\?theme=dark&amp;v=0#custom-star"/);
 }
 const memory = await buildSpriteContent({ icons: [{ name: 'memory.svg', content: '<svg viewBox="0 0 24 24"><path fill="red" d="M0 0h2v2z"/></svg>' }], prefix: 'web-' });
+const responsive = await buildSpriteContent({ target: 'inline', icons: [{ name: 'chart.svg', content: '<svg xmlns="http://www.w3.org/2000/svg" width="640" height="400" viewBox="0 0 640 400" style="display:block;height:auto;max-width:100%"><path d="M0 0h640v400z"/></svg>' }] });
+assert.ok(responsive.sprite.includes('data-isprite-viewport'));
 assert.ok(memory.sprite.includes('id="web-memory"'));
 assert.ok(memory.sprite.includes('fill="currentColor"'));
 const result = await generateSprite({ srcDir: './icons', outputFile: './public/sprite.svg' });

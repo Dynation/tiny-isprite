@@ -76,11 +76,20 @@ const staticPseudos = new Set([
 ]);
 function specificity(selector) {
   const score = [0, 0, 0, 0];
-  walk(selector, (node) => {
+  walk(selector, function (node) {
     if (node.type === "IdSelector") score[1]++;
     if (["ClassSelector", "AttributeSelector"].includes(node.type)) score[2]++;
     if (node.type === "TypeSelector" && node.name !== "*") score[3]++;
     if (node.type === "PseudoClassSelector") {
+      if (["where", "is", "not"].includes(node.name.toLowerCase())) {
+        let maximum = [0, 0, 0, 0];
+        node.children?.forEach((list) => list.children.forEach((child) => {
+          const next = specificity(child);
+          if (compare(next, maximum) > 0) maximum = next;
+        }));
+        if (node.name.toLowerCase() !== "where") maximum.forEach((n, i) => { score[i] += n; });
+        return this.skip;
+      }
       if (!staticPseudos.has(node.name.toLowerCase()))
         throw new Error(
           `Unsupported dynamic or complex SVG CSS :${node.name}; retain this artwork inline`,
@@ -119,9 +128,7 @@ export function flattenStyles(root) {
       node === root &&
       [
         "width",
-        "height",
         "min-width",
-        "max-width",
         "min-height",
         "max-height",
         "x",
@@ -142,14 +149,18 @@ export function flattenStyles(root) {
       throw new Error(
         `Unsupported SVG CSS shorthand ${property}; use longhand properties or retain this artwork inline`,
       );
+    const previous = winners.get(node).get(property);
+    let value = generate(decl.value);
+    // Plot's legacy WebKit fallback has the same intrinsic geometry as auto
+    // for the finite, viewBox-matched responsive viewport validated below.
+    if (node === root && property === "height" && value === "intrinsic" && previous?.value === "auto") value = "auto";
     const entry = {
       property,
-      value: generate(decl.value),
+      value,
       important: Boolean(decl.important),
       score,
       order: order++,
     };
-    const previous = winners.get(node).get(property);
     if (
       !previous ||
       Number(entry.important) > Number(previous.important) ||
