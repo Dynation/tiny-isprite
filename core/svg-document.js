@@ -271,7 +271,7 @@ export function recolor(
         `--${forceAllVars ? "all-" : ""}${iconId}-${p.prop}-${counters[p.prop]++}`,
       );
       variables.add(`  ${name}: ${p.value};`);
-      p.set(`var(${name})`);
+      p.set(`var(${name}, ${p.value})`);
     } else if (!multi && !preserveColored && p.prop === "fill")
       p.set("currentColor");
   }

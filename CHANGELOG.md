@@ -12,6 +12,10 @@
 
 ### Fixes and validation
 
+- Generated fill/stroke variables retain the original paint as a fallback:
+  `var(--name, sourceColor)`. This also covers multicolor `--all` output, so
+  missing CSS preserves the source palette in same-origin external use. Source
+  paint edits now change both the SVG fallback hash and the stylesheet hash.
 - Parse SVG XML and static CSS instead of deleting the root tag. Preserve root
   rendering properties, normalize comma-separated viewBoxes, namespace internal
   IDs and update local href/paint/ARIA references.

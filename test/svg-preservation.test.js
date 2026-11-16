@@ -126,8 +126,8 @@ test("CSS style paint participates in color modes without treating URL paint as 
     ],
     forceAllVars: true,
   });
-  assert.match(result.sprite, /var\(--all-root-fill-1\)/);
-  assert.match(result.sprite, /var\(--all-root-stroke-1\)/);
+  assert.match(result.sprite, /var\(--all-root-fill-1,#123456\)/);
+  assert.match(result.sprite, /var\(--all-root-stroke-1,#abcdef\)/);
   assert.match(result.css, /--all-root-fill-1: #123456/);
 });
 

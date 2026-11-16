@@ -37,15 +37,17 @@ test('stable hash and manifest on identical rebuild; changed content gets a new 
   assert.match(renderToStaticMarkup(React.createElement(Icon, { name: 'star', spriteUrl: second.url })), new RegExp(second.hash));
 });
 
-test('CSS-only changes update hashed CSS pointer even when sprite bytes are unchanged', async t => {
+test('source paint changes update both SVG fallback and CSS URLs while retaining old assets', async t => {
   const { options } = await fixture(t);
   const first = await generateSprite({ ...options, useCssVars: true, publicPath: '/app/assets', prefix: 'custom-' });
   await writeFile(path.join(options.srcDir, 'star.svg'), svg().replace('red', 'blue'));
   const second = await generateSprite({ ...options, useCssVars: true, publicPath: '/app/assets', prefix: 'custom-' });
-  assert.equal(second.url, first.url);
+  assert.notEqual(second.url, first.url);
   assert.notEqual(second.cssUrl, first.cssUrl);
   assert.match(second.url, /^\/app\/assets\/sprite\.[a-f0-9]{20}\.svg$/);
   assert.equal(second.prefix, 'custom-');
+  assert.match(await readFile(options.outputFile, 'utf8'), /var\(--star-fill-1, blue\)/);
+  assert.match(await readFile(path.join(path.dirname(options.outputFile), path.basename(first.url)), 'utf8'), /var\(--star-fill-1, red\)/);
 });
 
 test('add, rename, delete and empty source remove stale symbols', async t => {

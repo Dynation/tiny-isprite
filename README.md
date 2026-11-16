@@ -320,7 +320,13 @@ enabled on every rebuild:
 npx build-sprite ./icons ./public/sprite.svg --manifest ./src/generated/sprite.js --use-css-vars
 ```
 
-Load the generated stylesheet and override its actual variable names:
+Every converted paint retains its source color as a fallback, for example
+`fill="var(--badge-fill-1, #2563eb)"`. Icons therefore retain their original colors
+when no stylesheet or custom property is provided. The same applies to strokes
+and to multicolor conversion with `--all`. Existing authored `var(...)`, `none`,
+`currentColor` and paint-server values are preserved.
+
+Load the generated stylesheet when you want a shared palette, and override its actual variable names:
 
 ```tsx
 import { Icon } from 'tiny-isprite';
@@ -343,8 +349,8 @@ Variable names follow `--<name>-fill-1`, `--<name>-stroke-1`, and so on; `--all`
 these variable names. Inspect `icons-vars.css` for the variables your icons produce.
 
 The stylesheet has its own hashed URL in `sprite.cssUrl`, plus an `icons-vars.css`
-alias. A color-only edit can update the CSS URL without changing the SVG URL; load
-`sprite.cssUrl` to receive that update.
+alias. Editing a source paint also changes its SVG fallback, so both hashed URLs
+update. Load `sprite.cssUrl` when using the generated shared palette.
 
 ## Production and caching
 

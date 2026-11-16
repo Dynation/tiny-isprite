@@ -15,6 +15,6 @@ test("public browser API preserves canonical output and bundles without Node bui
   assert.ok(Object.values(bundle.metafile.outputs).every(output => output.imports.length === 0));
   const loaded = await import(`data:text/javascript;base64,${Buffer.from(bundle.outputFiles[0].text).toString("base64")}`);
   const result = await loaded.buildSpriteContent({ icons, forceAllVars: true });
-  assert.match(result.sprite, /var\(--all-badge-fill-1\)/);
+  assert.match(result.sprite, /var\(--all-badge-fill-1, #112233\)/);
   assert.match(result.css, /#112233/);
 });

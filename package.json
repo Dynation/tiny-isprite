@@ -48,7 +48,7 @@
     "test:production": "node test/production.mjs",
     "check:release": "npm run typecheck && npm test && npm run test:svg && npm run test:compat && npm run test:browser && npm run test:production && npm audit",
     "prepare": "npm run build 1>&2",
-    "test:svg": "node test/svg-preservation.mjs"
+    "test:svg": "node test/svg-preservation.mjs && node test/variable-fallbacks.mjs"
   },
   "keywords": [
     "svg",
