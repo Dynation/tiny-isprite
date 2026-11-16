@@ -1,6 +1,6 @@
 {
   "name": "tiny-isprite",
-  "version": "2.2.0",
+  "version": "3.0.0",
   "type": "module",
   "main": "./dist/Icon.cjs",
   "module": "./dist/Icon.js",

@@ -1,6 +1,16 @@
 # Changelog
 
-## Unreleased
+## [3.0.0] - 2026-11-15
+
+### Breaking changes
+
+- CLI and Node generation now default to validated external output. Paint-server
+  artwork must use `--target inline` / `target: 'inline'` and be injected into
+  the page. Previously accepted unsupported SVG/CSS now rejects explicitly.
+- Static CSS is resolved before conversion. Dynamic selectors, at-rules,
+  shorthands and root CSS geometry require keeping the original SVG.
+
+### Fixes and validation
 
 - Parse SVG XML and static CSS instead of deleting the root tag. Preserve root
   rendering properties, normalize comma-separated viewBoxes, namespace internal
@@ -11,7 +21,7 @@
   paint-server artwork uses `inline`. The browser API defaults to `inline`.
 - Add pixel regression coverage in Chromium, Firefox and WebKit and generation
   dependencies for XML/CSS parsing and selector matching. The React runtime
-  component is unchanged. This unreleased change has not been published.
+  component is unchanged. This release candidate has not been published.
 
 
 ## [2.2.0] - 2026-11-12

@@ -198,6 +198,27 @@ One-shot generation errors exit with status 1. Watch mode logs rebuild errors an
 retries on the next SVG edit. An empty source folder publishes an empty sprite so
 removed icons do not remain in the current output.
 
+## Upgrading from 2.x to 3.0
+
+The React Icon props and ESM/CommonJS entries remain the same. The generation
+contract is stricter, so this release uses a new major version.
+
+1. Generate simple controls with the default `external` target and keep using the
+   manifest's hashed `sprite.url` from the same origin.
+2. Move artwork with gradient/mask/clip/filter URL references into a separate input
+   folder. Generate it with `--target inline` (Node: `target: 'inline'`), inject the
+   returned SVG into the page once, load its CSS and use Icon without external.
+3. Give the inline/external sets different symbol prefixes. Match each Icon's
+   prefix to its generated set. Retain old hashed assets with their old manifests
+   for open tabs and rollback.
+4. If the generator reports unsupported CSS or SVG, keep that artwork as its
+   original inline/standalone SVG. A successful old build was not proof that the
+   old output rendered correctly in every browser.
+
+No consumer should receive these stricter failures through a 2.x patch update.
+The npm package and Lab website are released independently; publishing this
+package does not deploy the editor or any storefront.
+
 ## SVG preservation and rendering targets
 
 The generator parses XML and keeps the original SVG viewport inside each symbol.
