@@ -1,6 +1,6 @@
 # Changelog
 
-## [3.0.0] - Unreleased
+## [3.0.0] - 2026-11-16
 
 ### Breaking changes
 
@@ -28,7 +28,8 @@
   paint-server artwork uses `inline`. The browser API defaults to `inline`.
 - Add pixel regression coverage in Chromium, Firefox and WebKit and generation
   dependencies for XML/CSS parsing and selector matching. The React runtime
-  component is unchanged. This release candidate has not been published.
+  component API is unchanged. The editor and its generated adapters are released
+  separately from the npm runtime.
 
 
 ## [2.2.0] - 2026-11-12
