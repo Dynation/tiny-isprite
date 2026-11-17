@@ -44,3 +44,23 @@ jobs:
           name: production-smoke-evidence
           path: .release-artifacts/
           if-no-files-found: ignore
+
+  svg-preservation:
+    name: SVG pixels in Chromium, Firefox and WebKit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium firefox webkit
+      - run: npm run test:svg
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: svg-preservation-evidence
+          path: .release-artifacts/svg-preservation/
+          if-no-files-found: ignore

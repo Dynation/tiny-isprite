@@ -32,6 +32,7 @@ export async function generateSprite({
   forceAllVars = false,
   minify = false,
   prefix = 'icon-',
+  target = 'external',
   publicPath = '/',
   manifestFile = outputFile.replace(/\.svg$/i, '') + '.manifest.js'
 }) {
@@ -40,8 +41,8 @@ export async function generateSprite({
     const icons = await Promise.all(files.map(async name => ({
       name, content: await fs.readFile(path.join(srcDir, name), 'utf8'),
     })));
-    const { sprite, css } = await buildSpriteContent({
-      icons, preserveColored, useCssVars, forceAllVars, minify, prefix,
+    const {sprite,css} = await buildSpriteContent({
+      icons, preserveColored, useCssVars, forceAllVars, minify, prefix, target,
     });
 
     if (/[?#]/.test(publicPath)) throw new Error('publicPath must not contain a query or fragment');

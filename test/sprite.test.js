@@ -37,15 +37,17 @@ test('stable hash and manifest on identical rebuild; changed content gets a new 
   assert.match(renderToStaticMarkup(React.createElement(Icon, { name: 'star', spriteUrl: second.url })), new RegExp(second.hash));
 });
 
-test('CSS-only changes update hashed CSS pointer even when sprite bytes are unchanged', async t => {
+test('source paint changes update both SVG fallback and CSS URLs while retaining old assets', async t => {
   const { options } = await fixture(t);
   const first = await generateSprite({ ...options, useCssVars: true, publicPath: '/app/assets', prefix: 'custom-' });
   await writeFile(path.join(options.srcDir, 'star.svg'), svg().replace('red', 'blue'));
   const second = await generateSprite({ ...options, useCssVars: true, publicPath: '/app/assets', prefix: 'custom-' });
-  assert.equal(second.url, first.url);
+  assert.notEqual(second.url, first.url);
   assert.notEqual(second.cssUrl, first.cssUrl);
   assert.match(second.url, /^\/app\/assets\/sprite\.[a-f0-9]{20}\.svg$/);
   assert.equal(second.prefix, 'custom-');
+  assert.match(await readFile(options.outputFile, 'utf8'), /var\(--star-fill-1, blue\)/);
+  assert.match(await readFile(path.join(path.dirname(options.outputFile), path.basename(first.url)), 'utf8'), /var\(--star-fill-1, red\)/);
 });
 
 test('add, rename, delete and empty source remove stale symbols', async t => {
@@ -107,7 +109,7 @@ test('packed npm artifact contains working ESM/CJS/types/CLI/generator entry poi
   execFileSync('tar', ['-xf', path.join(root, filename), '-C', root]);
   const { rename, symlink } = await import('node:fs/promises');
   await rename(path.join(root, 'package'), path.join(modules, 'tiny-isprite'));
-  for (const dependency of ['react', 'commander', '@types']) {
+  for (const dependency of ['react', 'commander', '@types', '@xmldom', 'css-tree', 'css-select']) {
     await symlink(path.join(repo, 'node_modules', dependency), path.join(modules, dependency), 'dir');
   }
   const esm = execFileSync(process.execPath, ['--input-type=module', '-e', "import Icon, { Icon as Named } from 'tiny-isprite'; import { generateSprite } from 'tiny-isprite/generator'; if (Icon !== Named || typeof generateSprite !== 'function') process.exit(1);"], { cwd: root });
@@ -129,4 +131,16 @@ test('generated JS and MJS manifests resolve with strict TypeScript checking', a
     await writeFile(path.join(root, 'consumer.mts'), `import sprite from './src/sprite.${extension}';\nconst url: string = sprite.url;\nconst css: string | undefined = sprite.cssUrl;\nvoid [url, css];\n`);
     execFileSync(process.execPath, [path.resolve('node_modules/typescript/bin/tsc'), '--noEmit', '--strict', '--skipLibCheck', '--module', 'NodeNext', '--moduleResolution', 'NodeNext', path.join(root, 'consumer.mts')]);
   }
+});
+
+test('failed external compatibility validation leaves the previous published manifest and aliases intact', async t => {
+  const { options } = await fixture(t);
+  await generateSprite(options);
+  const manifest = await readFile(options.manifestFile, 'utf8');
+  const alias = await readFile(options.outputFile, 'utf8');
+  await writeFile(path.join(options.srcDir,'star.svg'), '<svg><defs><clipPath id="crop"><circle r="10"/></clipPath></defs><path clip-path="url(#crop)"/></svg>');
+  await assert.rejects(generateSprite(options), /star.svg.*inline sprite/);
+  assert.equal(await readFile(options.manifestFile, 'utf8'),manifest);
+  assert.equal(await readFile(options.outputFile, 'utf8'),alias);
+  await generateSprite({...options,target:'inline'});
 });

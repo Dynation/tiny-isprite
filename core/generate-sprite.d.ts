@@ -13,6 +13,8 @@ export interface GenerateSpriteOptions {
   forceAllVars?: boolean;
   minify?: boolean;
   prefix?: string;
+  /** Defaults to external; paint-server URLs require inline target. */
+  target?: 'inline' | 'external';
   publicPath?: string;
   manifestFile?: string;
 }

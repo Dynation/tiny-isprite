@@ -17,6 +17,7 @@ program
   .option('-m, --minify', 'Minify the output sprite.svg', false)
   .option('-x, --prefix <prefix>', 'Add prefix to all icon IDs', 'icon-')
   .option('--public-path <url>', 'Public URL directory (including deployment base path)', '/')
+  .option('--target <target>', 'Validate for inline or portable external SVG use', 'external')
   .option('--manifest <file>', 'Generated ES module to import from application source')
   .option('-w, --watch', 'Regenerate when source SVG files change', false)
   .version(JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version)
@@ -29,6 +30,7 @@ program
       forceAllVars: options.all,
       minify: options.minify,
       prefix: options.prefix,
+      target: options.target,
       publicPath: options.publicPath,
       manifestFile: options.manifest
     });

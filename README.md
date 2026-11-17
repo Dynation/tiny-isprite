@@ -20,15 +20,28 @@ The npm package stays focused on the sprite generator and React `Icon` component
 The browser editor and exported animation player are separate; installing
 `tiny-isprite` does not add an animation runtime to your app.
 
-This README documents **2.2.0**, including the browser generation API. For existing
-projects, see [Upgrading from 2.0.x](#upgrading-from-20x).
+This README documents **3.0.0**. For existing projects, see
+[Upgrading from 2.x to 3.0](#upgrading-from-2x-to-30).
+
+### Choosing a version
+
+- **3.0.0** is the recommended target for new integrations: preserved SVG root
+  semantics, scoped local IDs, explicit rendering targets and paint-variable
+  fallbacks. Its stricter validation can require migrating existing artwork.
+- **2.2.0** remains available without deprecation for integrations that need their
+  existing generation behavior. Pin `tiny-isprite@2.2.0` and keep using artwork
+  already verified in your application. It does not include the 3.0 converter
+  fixes and is not a second feature-development line.
+
+Older versions should upgrade to 2.2.0 for compatibility or migrate to 3.0.0.
+Deprecation notices are advisory; they do not remove installed packages.
 
 ## Quick start
 
 The CLI requires **Node.js 18+**.
 
 ```bash
-npm install tiny-isprite
+npm install tiny-isprite@3.0.0
 ```
 
 Put SVG files in `icons/`. Each filename becomes a symbol name: `star.svg` becomes
@@ -111,7 +124,7 @@ npx build-sprite ./icons ./public/assets/sprite.svg --manifest ./src/generated/s
 Match `--public-path` to your deployment, including Vite `base` or Next.js
 `basePath`; the generator does not infer either setting. Import the manifest normally
 in Next.js. Add `"use client"` to components that use client-side features such as
-state, as shown in the [Next.js example](examples/next/app/sprite-demo.jsx).
+state, as shown in the [Next.js example](https://github.com/Dynation/tiny-isprite/blob/master/examples/next/app/sprite-demo.jsx).
 
 ## Upgrading from 2.0.x
 
@@ -186,16 +199,116 @@ build-sprite [srcDir] [outputFile] [options]
 | `-p, --preserve-colored` | Off | Keep original monochrome fills instead of converting them to `currentColor`. |
 | `-c, --use-css-vars` | Off | Convert explicit fills/strokes to variables for icons classified as monochrome. |
 | `-a, --all` | Off | Convert explicit fills/strokes to variables for all icons. |
-| `-m, --minify` | Off | Collapse whitespace in the generated SVG. |
+| `-m, --minify` | Off | Compact wrapper formatting without collapsing SVG text. |
+| `--target <target>` | `external` | Validate portable external use, or generate `inline` artwork. |
 
 Icons with multiple explicit fill colors are preserved by default. `none`,
 `currentColor` and paint-server references such as `url(...)` are left unchanged
-by CSS-variable conversion. Supply a four-value `viewBox`; otherwise the generator
-falls back to `0 0 24 24`.
+by CSS-variable conversion. Supply a valid four-number `viewBox`. Commas are accepted; invalid values reject.
+A missing viewBox falls back to `0 0 24 24`.
 
 One-shot generation errors exit with status 1. Watch mode logs rebuild errors and
 retries on the next SVG edit. An empty source folder publishes an empty sprite so
 removed icons do not remain in the current output.
+
+## Upgrading from 2.x to 3.0
+
+The React Icon props and ESM/CommonJS entries remain the same. The generation
+contract is stricter, so this release uses a new major version.
+
+1. Generate simple controls with the default `external` target and keep using the
+   manifest's hashed `sprite.url` from the same origin.
+2. Move artwork with gradient/mask/clip/filter URL references into a separate input
+   folder. Generate it with `--target inline` (Node: `target: 'inline'`), inject the
+   returned SVG into the page once, load its CSS and use Icon without external.
+3. Give the inline/external sets different symbol prefixes. Match each Icon's
+   prefix to its generated set. Retain old hashed assets with their old manifests
+   for open tabs and rollback.
+4. If the generator reports unsupported CSS or SVG, keep that artwork as its
+   original inline/standalone SVG. A successful old build was not proof that the
+   old output rendered correctly in every browser.
+
+CSS-variable output now embeds its source paint as a fallback. Editing that
+paint changes both the SVG and CSS hashes; always deploy their matching manifest.
+The editor automatically chooses inline output for supported responsive roots.
+Raw symbol consumers need an adapter for viewport metadata; the npm Icon retains
+its square size API.
+
+No consumer should receive these stricter failures through a 2.x patch update.
+The npm package and Lab website are released independently; publishing this
+package does not deploy the editor or any storefront.
+
+## SVG preservation and rendering targets
+
+The generator parses XML and keeps the original SVG viewport inside each symbol.
+Root paint, opacity, style and `preserveAspectRatio` survive conversion; root
+attribute transforms move to the surrounding group so their viewport units also
+work in WebKit. Comma-separated `viewBox` values are normalized. Malformed or
+nonpositive viewBoxes reject with the source filename; a missing viewBox retains
+the legacy `0 0 24 24` fallback.
+
+Every internal ID and its local href, paint URL and ARIA references are renamed
+per icon. Duplicate IDs within an input, duplicate symbol names and generated-ID
+collisions reject instead of producing ambiguous references. Self-contained
+static CSS is matched against the original SVG tree and materialized as inline
+longhand declarations, preserving specificity, source order and `!important`.
+This includes selectors such as `svg > path`, classes, escaped IDs, attribute
+selectors, static `:where()`, `:is()`, `:not()` and supported structural pseudo-classes. Empty style placeholders keep
+structural element positions. CSS is resolved before IDs are renamed.
+
+There are two validation targets:
+
+- **`external`** is the CLI and filesystem-generator default. It rejects paint
+  URL references (gradients, masks, clip paths, filters) because external `<use>`
+  does not render those consistently across the tested Chromium and WebKit
+  engines. Use it for the portable external icon subset and serve the hashed
+  manifest URL from the same origin.
+- **`inline`** is the in-memory browser API default. It preserves those references
+  for a sprite injected into the page. Choose `--target inline` or `target:
+  'inline'` explicitly in the CLI/Node API for this output. Inject the generated
+  SVG once, load its generated CSS if needed, and use `<Icon name="..." />`
+  without external mode. A sprite can be split into an external set of simple
+  controls and a separate inline set of complex artwork. Give these sets distinct
+  symbol prefixes (for example `external-` and `inline-`).
+
+```bash
+build-sprite ./icons ./public/sprite.svg --target external
+build-sprite ./artwork ./generated/artwork.svg --target inline
+```
+
+```js
+const { sprite, css } = await buildSpriteContent({
+  icons, target: 'inline', preserveColored: true,
+});
+```
+
+Responsive Plot-style roots (`display:block; height:auto; max-width:100%`) with
+finite pixel width/height matching their viewBox aspect ratio are supported in
+inline output. Plot's `height:intrinsic` fallback after `height:auto` is normalized
+for this verified geometry. Other root viewport rules remain explicit errors.
+Root transforms/x/y and important layout declarations are not combined with this
+layout path. The symbol carries `data-isprite-viewport` JSON with its natural
+width/height. An inline adapter applies that layout to the outer visible SVG,
+with a normalized viewBox, proportional automatic height and parent-width cap;
+the inner SVG retains the source coordinates. The editor's generated InlineIcon
+and standalone exports handle this automatically. Raw symbol consumers must apply
+the viewport metadata themselves; the basic square Icon does not infer it. These
+roots reject external output with an instruction to generate an inline sprite.
+
+Dynamic selectors (including hover and relational `:has()`), CSS
+at-rules, CSS shorthands, unsupported root CSS viewport sizing/transforms, SMIL, scripts and
+foreignObject currently reject with a file-specific error. Keep such artwork as
+its original standalone/inline SVG until its semantics have explicit support;
+do not silently discard its properties. CSS longhands for paint, color, opacity
+and typography remain supported. Context-dependent rules that rely on an HTML
+ancestor or stylesheets outside the input SVG are outside this self-contained
+static CSS contract. This is a compatibility converter, not an SVG sanitizer.
+
+`--minify` changes wrapper formatting only; it does not collapse significant text
+or CSS whitespace. Output bytes and hashes change after this converter update,
+so deploy the new assets with their matching manifest and retain earlier assets.
+The parser/selector dependencies belong to generation; the React Icon entry
+continues to import only React.
 
 ## Colors
 
@@ -226,7 +339,13 @@ enabled on every rebuild:
 npx build-sprite ./icons ./public/sprite.svg --manifest ./src/generated/sprite.js --use-css-vars
 ```
 
-Load the generated stylesheet and override its actual variable names:
+Every converted paint retains its source color as a fallback, for example
+`fill="var(--badge-fill-1, #2563eb)"`. Icons therefore retain their original colors
+when no stylesheet or custom property is provided. The same applies to strokes
+and to multicolor conversion with `--all`. Existing authored `var(...)`, `none`,
+`currentColor` and paint-server values are preserved.
+
+Load the generated stylesheet when you want a shared palette, and override its actual variable names:
 
 ```tsx
 import { Icon } from 'tiny-isprite';
@@ -249,8 +368,8 @@ Variable names follow `--<name>-fill-1`, `--<name>-stroke-1`, and so on; `--all`
 these variable names. Inspect `icons-vars.css` for the variables your icons produce.
 
 The stylesheet has its own hashed URL in `sprite.cssUrl`, plus an `icons-vars.css`
-alias. A color-only edit can update the CSS URL without changing the SVG URL; load
-`sprite.cssUrl` to receive that update.
+alias. Editing a source paint also changes its SVG fallback, so both hashed URLs
+update. Load `sprite.cssUrl` when using the generated shared palette.
 
 ## Production and caching
 
@@ -309,7 +428,7 @@ source folder to `./public/icons`; specify `srcDir` to make the choice explicit.
 ## Browser generation API
 
 Use `tiny-isprite/browser` to generate sprite and CSS strings without Node.js
-filesystem imports, manifests or a DOM. This entry uses the same engine as the CLI.
+filesystem imports, manifests or a host DOM; the XML parser is bundled. This entry uses the same engine as the CLI.
 
 ```js
 import { buildSpriteContent } from 'tiny-isprite/browser';
@@ -323,7 +442,7 @@ const { sprite, css } = await buildSpriteContent({
 ```
 
 `icons` is an array of `{ name, content }`. Supported flags are `preserveColored`,
-`useCssVars`, `forceAllVars`, `minify` and `prefix`, with the same color semantics as
+`useCssVars`, `forceAllVars`, `minify`, `prefix` and `target`, with the same color semantics as
 the CLI. The result contains `sprite` and optional `css` strings. The caller owns
 input sanitization, hashing, filenames and delivery; this API does not sanitize
 untrusted SVG. TypeScript declarations are included.
@@ -340,7 +459,8 @@ The CLI, React component and browser generation API remain in this repository.
 
 ## Examples
 
-The [Vite](examples/vite) and [Next.js](examples/next) examples use this checkout as a
+The [Vite](https://github.com/Dynation/tiny-isprite/tree/master/examples/vite) and
+[Next.js](https://github.com/Dynation/tiny-isprite/tree/master/examples/next) examples use this checkout as a
 local dependency. Both demonstrate the `/demo` base path and `demo-` symbol prefix.
 From the repository root:
 
@@ -363,13 +483,18 @@ local preview/Next.js; configure equivalent rules on your actual host.
 
 ## Contributing and release checks
 
-Use Node 22+ for the full release suite:
+Use Node 22+ for the full release suite (the pinned Playwright test tools need
+Node 20+; this does not change the package runtime minimum of Node 18):
 
 ```bash
 npm ci
-npx playwright install chromium
+npx playwright install chromium firefox webkit
 npm run check:release
 ```
+
+The Node test files run serially: parallel packed-consumer checks triggered a
+Node 22 child-runner result-deserialization error in the local environment.
+The same assertions pass in serial execution.
 
 Individual checks:
 
@@ -378,13 +503,14 @@ Individual checks:
 | `npm run typecheck` | Library source types. |
 | `npm test` | Generator, React/API, typed manifests, packed package and stale `dist` regression tests. |
 | `npm run test:compat` | Packed package with React 17/18/19 on the current Node; ESM, CommonJS, SSR, CLI and TypeScript. |
+| `npm run test:svg` | Source-versus-sprite pixels in Chromium/Firefox/WebKit, inline complex artwork, portable external controls and CSS-variable updates. |
 | `npm run test:browser` | Vite Fast Refresh with React state retention and an immutable-cache regression. |
 | `npm run test:production` | Packed consumers, two Vite/Next.js production builds, visible SVG updates with warm cache, retained assets, Next.js SSR/hydration, and consumer audits. |
 | `npm audit` | The repository dependency tree. |
 
-[GitHub Actions](.github/workflows/ci.yml) defines the Node 18/20/22/24 compatibility
-matrix and production browser checks. The same 12 Node/React combinations have been
-checked locally. These are local production-server tests, not proof of a live CDN,
+[GitHub Actions](https://github.com/Dynation/tiny-isprite/blob/master/.github/workflows/ci.yml) defines the Node 18/20/22/24 compatibility
+matrix and production browser checks. The current changes are checked locally on Node 22; the remaining Node versions
+are defined by CI and require their own run. These are local production-server tests, not proof of a live CDN,
 Vercel deployment or physical-device coverage.
 
 Screenshots, production logs, compatibility results and the packed archive go into
