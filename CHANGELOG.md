@@ -1,6 +1,6 @@
 # Changelog
 
-## [3.0.0] - 2026-11-15
+## [3.0.0] - Unreleased
 
 ### Breaking changes
 
@@ -8,10 +8,13 @@
   artwork must use `--target inline` / `target: 'inline'` and be injected into
   the page. Previously accepted unsupported SVG/CSS now rejects explicitly.
 - Static CSS is resolved before conversion. Dynamic selectors, at-rules,
-  shorthands and root CSS geometry require keeping the original SVG.
+  shorthands and unsupported root CSS geometry require keeping the original SVG.
 
 ### Fixes and validation
 
+- Support verified responsive Plot-style root geometry through inline viewport
+  metadata. The editor's generated adapter applies natural dimensions and a
+  parent-width cap; the basic npm Icon remains square and does not infer metadata.
 - Generated fill/stroke variables retain the original paint as a fallback:
   `var(--name, sourceColor)`. This also covers multicolor `--all` output, so
   missing CSS preserves the source palette in same-origin external use. Source

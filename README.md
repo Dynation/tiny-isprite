@@ -20,15 +20,28 @@ The npm package stays focused on the sprite generator and React `Icon` component
 The browser editor and exported animation player are separate; installing
 `tiny-isprite` does not add an animation runtime to your app.
 
-This README documents **2.2.0**, including the browser generation API. For existing
-projects, see [Upgrading from 2.0.x](#upgrading-from-20x).
+This README documents **3.0.0**. For existing projects, see
+[Upgrading from 2.x to 3.0](#upgrading-from-2x-to-30).
+
+### Choosing a version
+
+- **3.0.0** is the recommended target for new integrations: preserved SVG root
+  semantics, scoped local IDs, explicit rendering targets and paint-variable
+  fallbacks. Its stricter validation can require migrating existing artwork.
+- **2.2.0** remains available without deprecation for integrations that need their
+  existing generation behavior. Pin `tiny-isprite@2.2.0` and keep using artwork
+  already verified in your application. It does not include the 3.0 converter
+  fixes and is not a second feature-development line.
+
+Older versions should upgrade to 2.2.0 for compatibility or migrate to 3.0.0.
+Deprecation notices are advisory; they do not remove installed packages.
 
 ## Quick start
 
 The CLI requires **Node.js 18+**.
 
 ```bash
-npm install tiny-isprite
+npm install tiny-isprite@3.0.0
 ```
 
 Put SVG files in `icons/`. Each filename becomes a symbol name: `star.svg` becomes
@@ -111,7 +124,7 @@ npx build-sprite ./icons ./public/assets/sprite.svg --manifest ./src/generated/s
 Match `--public-path` to your deployment, including Vite `base` or Next.js
 `basePath`; the generator does not infer either setting. Import the manifest normally
 in Next.js. Add `"use client"` to components that use client-side features such as
-state, as shown in the [Next.js example](examples/next/app/sprite-demo.jsx).
+state, as shown in the [Next.js example](https://github.com/Dynation/tiny-isprite/blob/master/examples/next/app/sprite-demo.jsx).
 
 ## Upgrading from 2.0.x
 
@@ -214,6 +227,12 @@ contract is stricter, so this release uses a new major version.
 4. If the generator reports unsupported CSS or SVG, keep that artwork as its
    original inline/standalone SVG. A successful old build was not proof that the
    old output rendered correctly in every browser.
+
+CSS-variable output now embeds its source paint as a fallback. Editing that
+paint changes both the SVG and CSS hashes; always deploy their matching manifest.
+The editor automatically chooses inline output for supported responsive roots.
+Raw symbol consumers need an adapter for viewport metadata; the npm Icon retains
+its square size API.
 
 No consumer should receive these stricter failures through a 2.x patch update.
 The npm package and Lab website are released independently; publishing this
@@ -440,7 +459,8 @@ The CLI, React component and browser generation API remain in this repository.
 
 ## Examples
 
-The [Vite](examples/vite) and [Next.js](examples/next) examples use this checkout as a
+The [Vite](https://github.com/Dynation/tiny-isprite/tree/master/examples/vite) and
+[Next.js](https://github.com/Dynation/tiny-isprite/tree/master/examples/next) examples use this checkout as a
 local dependency. Both demonstrate the `/demo` base path and `demo-` symbol prefix.
 From the repository root:
 
@@ -487,7 +507,7 @@ Individual checks:
 | `npm run test:production` | Packed consumers, two Vite/Next.js production builds, visible SVG updates with warm cache, retained assets, Next.js SSR/hydration, and consumer audits. |
 | `npm audit` | The repository dependency tree. |
 
-[GitHub Actions](.github/workflows/ci.yml) defines the Node 18/20/22/24 compatibility
+[GitHub Actions](https://github.com/Dynation/tiny-isprite/blob/master/.github/workflows/ci.yml) defines the Node 18/20/22/24 compatibility
 matrix and production browser checks. The current changes are checked locally on Node 22; the remaining Node versions
 are defined by CI and require their own run. These are local production-server tests, not proof of a live CDN,
 Vercel deployment or physical-device coverage.
