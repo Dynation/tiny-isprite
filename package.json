@@ -62,7 +62,7 @@
   "license": "MIT",
   "description": "SVG sprite generator and React icon component with content-hashed URLs and watch mode.",
   "devDependencies": {
-    "@playwright/test": "^1.56.1",
+    "@playwright/test": "1.64.1",
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.2",
     "@vitejs/plugin-react": "^4.7.0",

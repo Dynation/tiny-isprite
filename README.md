@@ -483,7 +483,8 @@ local preview/Next.js; configure equivalent rules on your actual host.
 
 ## Contributing and release checks
 
-Use Node 22+ for the full release suite:
+Use Node 22+ for the full release suite (the pinned Playwright test tools need
+Node 20+; this does not change the package runtime minimum of Node 18):
 
 ```bash
 npm ci
